@@ -1,19 +1,21 @@
 package com.shohankhan.bokeya.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,24 +23,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.EastRounded
+import androidx.compose.material.icons.filled.Handshake
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,11 +54,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shohankhan.bokeya.core.BanglaDate
 import com.shohankhan.bokeya.core.BanglaNumbers
 import com.shohankhan.bokeya.core.Clocks
+import com.shohankhan.bokeya.core.CurrencyFormatter
 import com.shohankhan.bokeya.core.Money
 import com.shohankhan.bokeya.domain.AccountType
 import com.shohankhan.bokeya.domain.HealthLevel
@@ -64,19 +70,43 @@ import com.shohankhan.bokeya.domain.InsightTone
 import com.shohankhan.bokeya.domain.TxType
 import com.shohankhan.bokeya.domain.UpcomingPayment
 import com.shohankhan.bokeya.ui.DashboardState
+import com.shohankhan.bokeya.ui.components.BokeyaCanvas
 import com.shohankhan.bokeya.ui.components.BokeyaCard
+import com.shohankhan.bokeya.ui.components.BokeyaGroup
 import com.shohankhan.bokeya.ui.components.BokeyaProgress
-import com.shohankhan.bokeya.ui.components.EmptyState
-import com.shohankhan.bokeya.ui.components.HeroGradient
-import com.shohankhan.bokeya.ui.components.InfoRow
+import com.shohankhan.bokeya.ui.components.BokeyaRow
+import com.shohankhan.bokeya.ui.components.BokeyaSection
+import com.shohankhan.bokeya.ui.components.BokeyaToneCard
+import com.shohankhan.bokeya.ui.components.CanvasInset
+import com.shohankhan.bokeya.ui.components.ComparisonBars
+import com.shohankhan.bokeya.ui.components.Eyebrow
+import com.shohankhan.bokeya.ui.components.IconBadge
+import com.shohankhan.bokeya.ui.components.LegendItem
 import com.shohankhan.bokeya.ui.components.MoneyText
+import com.shohankhan.bokeya.ui.components.ProgressRing
 import com.shohankhan.bokeya.ui.components.QuickAction
+import com.shohankhan.bokeya.ui.components.RowDivider
 import com.shohankhan.bokeya.ui.components.SectionHeader
-import com.shohankhan.bokeya.ui.components.SegmentedToggle
-import com.shohankhan.bokeya.ui.components.SkeletonCard
+import com.shohankhan.bokeya.ui.components.Skeleton
+import com.shohankhan.bokeya.ui.components.SkeletonHero
+import com.shohankhan.bokeya.ui.components.Slice
+import com.shohankhan.bokeya.ui.components.Sparkline
+import com.shohankhan.bokeya.ui.components.StackedBar
+import com.shohankhan.bokeya.ui.theme.Durations
+import com.shohankhan.bokeya.ui.theme.IconSize
+import com.shohankhan.bokeya.ui.theme.Radius
+import com.shohankhan.bokeya.ui.theme.Space
 import com.shohankhan.bokeya.ui.theme.bokeya
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
+/**
+ * Dashboard.
+ *
+ * Reading order is fixed by priority, not by convenience: overdue → hero (what I owe / receive,
+ * with pressure + composition) → today → what's next → insight → month → activity. Only two
+ * blocks on this screen are cards; everything else is a flat section or a tonal group.
+ */
 @Composable
 fun DashboardScreen(
     state: DashboardState,
@@ -94,104 +124,93 @@ fun DashboardScreen(
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 8.dp,
-            bottom = contentPadding.calculateBottomPadding() + 96.dp,
+            start = Space.gutter,
+            end = Space.gutter,
+            top = Space.sm,
+            bottom = contentPadding.calculateBottomPadding() + 108.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(Space.xxl),
     ) {
         item("greeting") { GreetingRow(state.userName, onSearch) }
 
         if (state.loading) {
             item("skeleton") {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    SkeletonCard()
-                    SkeletonCard()
+                Column(verticalArrangement = Arrangement.spacedBy(Space.lg)) {
+                    SkeletonHero()
+                    Skeleton(Modifier.fillMaxWidth(0.4f), 16.dp)
+                    Skeleton(Modifier.fillMaxWidth(), 84.dp, Radius.lg)
                 }
             }
             return@LazyColumn
         }
 
-        // Dashboard is dynamic: overdue first when it exists, onboarding when empty.
         if (!state.hasAnyData) {
-            item("empty") {
-                BokeyaCard {
-                    Text(
-                        "চলুন আপনার প্রথম হিসাবটি যোগ করি",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "বকেয়া = আপনাকে দিতে হবে · পাওনা = আপনি পাবেন",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.bokeya.muted,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    QuickActionsRow(onQuickAction)
+            item("firstrun") { FirstRunPanel(onQuickAction) }
+            return@LazyColumn
+        }
+
+        if (state.overdue.isNotEmpty()) {
+            item("overdue") { OverdueBanner(state, onOverdueClick) }
+        }
+
+        item("hero") {
+            HeroOverview(
+                state = state,
+                showReceivable = showReceivable,
+                onToggle = { showReceivable = it },
+                onNextClick = { state.nextPayment?.let { onAccountClick(it.accountId) } },
+            )
+        }
+
+        item("today") { TodaySection(state) }
+
+        if (state.upcoming.isNotEmpty()) {
+            item("upcoming") {
+                BokeyaSection(
+                    title = "সামনে যা আছে",
+                    subtitle = upcomingSubtitle(state),
+                    actionLabel = "সব",
+                    onAction = onSeeAllUpcoming,
+                ) {
+                    BokeyaGroup {
+                        val shown = state.upcoming.take(4)
+                        shown.forEachIndexed { index, payment ->
+                            UpcomingRow(payment) { onAccountClick(payment.accountId) }
+                            if (index != shown.lastIndex) RowDivider(inset = 68.dp)
+                        }
+                    }
                 }
             }
         }
 
-        if (state.overdue.isNotEmpty()) {
-            item("overdue") { OverdueCard(state, onOverdueClick) }
-        }
-
-        item("hero") {
-            HeroCard(
-                state = state,
-                showReceivable = showReceivable,
-                onToggle = { showReceivable = it },
-            )
-        }
-
-        if (state.hasAnyData) {
-            item("quick") {
-                BokeyaCard(contentPadding = 12.dp) { QuickActionsRow(onQuickAction) }
+        state.insights.firstOrNull()?.let { insight ->
+            item("insight") {
+                BokeyaSection(title = "আপনার জন্য") {
+                    InsightPanel(insight.text, insight.tone, state.insights.drop(1).map { it.text })
+                }
             }
         }
 
-        item("today") { TodayCard(state) }
-
-        item("health") { HealthCard(state) }
-
-        if (state.upcoming.isNotEmpty()) {
-            item("upcoming_header") {
-                SectionHeader("সামনে যা আছে", actionLabel = "সব দেখুন", onAction = onSeeAllUpcoming)
-            }
-            items(state.upcoming.take(4), key = { "up_${it.accountId}_${it.installmentId ?: 0}" }) { payment ->
-                UpcomingRow(payment, onClick = { onAccountClick(payment.accountId) })
-            }
-        }
-
-        if (state.insights.isNotEmpty()) {
-            item("insights_header") { SectionHeader("আপনার জন্য") }
-            items(state.insights, key = { "in_${it.id}" }) { insight ->
-                InsightCard(insight.text, insight.tone)
-            }
-        }
-
-        item("month") { MonthCard(state) }
-
-        if (state.totalObligations.isPositive) {
-            item("debtfree") { DebtFreeCard(state) }
-        }
+        item("month") { MonthSection(state) }
 
         if (state.recent.isNotEmpty()) {
-            item("recent_header") {
-                SectionHeader("সাম্প্রতিক", actionLabel = "সব দেখুন", onAction = onSeeAllTransactions)
-            }
             item("recent") {
-                BokeyaCard(contentPadding = 8.dp) {
-                    state.recent.forEach { tx ->
-                        TransactionRow(
-                            title = tx.title,
-                            subtitle = tx.type.label,
-                            amount = Money(tx.amount),
-                            type = tx.type,
-                            date = LocalDate.ofEpochDay(tx.date),
-                        )
+                BokeyaSection(
+                    title = "সাম্প্রতিক",
+                    actionLabel = "সব",
+                    onAction = onSeeAllTransactions,
+                ) {
+                    BokeyaGroup {
+                        state.recent.forEachIndexed { index, tx ->
+                            TransactionRow(
+                                title = tx.title,
+                                subtitle = tx.type.label,
+                                amount = Money(tx.amount),
+                                type = tx.type,
+                                date = LocalDate.ofEpochDay(tx.date),
+                            )
+                            if (index != state.recent.lastIndex) RowDivider(inset = 68.dp)
+                        }
                     }
                 }
             }
@@ -199,105 +218,189 @@ fun DashboardScreen(
     }
 }
 
+private fun upcomingSubtitle(state: DashboardState): String? {
+    val week = state.weekTotal
+    if (!week.isPositive) return null
+    return "আগামী ৭ দিনে " + CurrencyFormatter.format(week)
+}
+
+// ---------------------------------------------------------------- header
+
 @Composable
 private fun GreetingRow(userName: String, onSearch: () -> Unit) {
+    val today = Clocks.today()
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(top = Space.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(Modifier.weight(1f)) {
             Text(
                 text = BanglaDate.greeting() + if (userName.isNotBlank()) ", $userName" else "",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.semantics { heading() },
             )
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = BanglaDate.full(Clocks.today()) + " · " + BanglaDate.weekdayName(Clocks.today()),
+                text = BanglaDate.weekdayName(today) + " · " + BanglaDate.full(today),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.bokeya.muted,
+                color = MaterialTheme.bokeya.faint,
             )
         }
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(44.dp),
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.bokeya.surface2)
+                .clickable(onClick = onSearch),
+            contentAlignment = Alignment.Center,
         ) {
-            IconButton(onClick = onSearch) {
-                Icon(Icons.Filled.Search, contentDescription = "খুঁজুন")
-            }
+            Icon(
+                Icons.Filled.Search,
+                contentDescription = "খুঁজুন",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(IconSize.md),
+            )
         }
     }
 }
 
+// ---------------------------------------------------------------- hero
+
+/**
+ * Asymmetric two-column hero.
+ *
+ * Left column carries the headline number and the direction switch; the right column carries the
+ * pressure signal (settled ring, or receivable count). Beneath them a full-width stacked bar plus
+ * a legend grid uses the remaining width for the category split — this is what removes the dead
+ * space the old pill row left behind.
+ */
 @Composable
-private fun HeroCard(
+private fun HeroOverview(
     state: DashboardState,
     showReceivable: Boolean,
     onToggle: (Boolean) -> Unit,
+    onNextClick: () -> Unit,
 ) {
-    HeroGradient {
-        SegmentedToggleOnHero(showReceivable, onToggle)
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = if (showReceivable) "মোট পাওনা" else "মোট বকেয়া",
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = 0.75f),
-        )
-        Spacer(Modifier.height(4.dp))
-        MoneyText(
-            money = if (showReceivable) state.totalTheyOwe else state.totalIOwe,
-            style = MaterialTheme.typography.displaySmall,
-            color = Color.White,
-            animate = true,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(16.dp))
-        if (!showReceivable) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                BreakdownPill("দোকান", state.breakdown[AccountType.SHOP] ?: Money.ZERO)
-                BreakdownPill("Loan", state.breakdown[AccountType.LOAN] ?: Money.ZERO)
-                BreakdownPill("EMI", state.breakdown[AccountType.EMI] ?: Money.ZERO)
-                BreakdownPill("ব্যক্তিগত", state.breakdown[AccountType.PERSONAL] ?: Money.ZERO)
+    val extras = MaterialTheme.bokeya
+    val amount = if (showReceivable) state.totalTheyOwe else state.totalIOwe
+
+    BokeyaCanvas(contentPadding = PaddingValues(Space.xl)) {
+        DirectionSwitch(showReceivable, onToggle)
+
+        Spacer(Modifier.height(Space.xl))
+
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Eyebrow(
+                    if (showReceivable) "মোট পাওনা" else "মোট বকেয়া",
+                    color = extras.onHeroMuted,
+                )
+                Spacer(Modifier.height(Space.xs))
+                AnimatedContent(
+                    targetState = amount,
+                    transitionSpec = {
+                        fadeIn(tween(Durations.standard)) togetherWith fadeOut(tween(Durations.fast))
+                    },
+                    label = "heroAmount",
+                ) { value ->
+                    MoneyText(
+                        money = value,
+                        style = MaterialTheme.typography.displayMedium,
+                        color = extras.onHero,
+                        animate = true,
+                    )
+                }
+                Spacer(Modifier.height(Space.sm))
+                Text(
+                    text = heroCaption(state, showReceivable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = extras.onHeroMuted,
+                )
             }
+
+            Spacer(Modifier.width(Space.md))
+
+            // Right column: the pressure signal. Never empty — it always has something to say.
+            if (!showReceivable && state.totalObligations.isPositive) {
+                ProgressRing(
+                    progress = state.debtFreeProgress,
+                    size = 92.dp,
+                    stroke = 9.dp,
+                    color = extras.onHero,
+                    trackColor = Color.White.copy(alpha = 0.16f),
+                    caption = BanglaNumbers.toBanglaDigits(
+                        (state.debtFreeProgress * 100).toInt().toString(),
+                    ) + "%",
+                    captionColor = extras.onHero,
+                    subCaption = "শোধ",
+                )
+            } else {
+                ReceivableGlyph(state.receivableCount, extras.onHero)
+            }
+        }
+
+        Spacer(Modifier.height(Space.xl))
+
+        if (!showReceivable) {
+            HeroComposition(state)
         } else {
-            Text(
-                "অন্যদের কাছে আপনার পাওনা টাকা",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.75f),
-            )
+            HeroReceivableNote(state)
+        }
+
+        // Next obligation lives inside the hero: it is the single most actionable fact here.
+        state.nextPayment?.takeIf { !showReceivable }?.let { next ->
+            Spacer(Modifier.height(Space.md))
+            NextPaymentStrip(next, onNextClick)
         }
     }
 }
 
+private fun heroCaption(state: DashboardState, showReceivable: Boolean): String {
+    if (showReceivable) {
+        return if (state.receivableCount == 0) {
+            "কারও কাছে আপনার পাওনা নেই"
+        } else {
+            BanglaNumbers.toBanglaDigits(state.receivableCount.toString()) + " জনের কাছে পাওনা"
+        }
+    }
+    val active = state.accountCounts.values.sum()
+    return if (active == 0) {
+        "সব হিসাব পরিশোধ হয়ে গেছে"
+    } else {
+        BanglaNumbers.toBanglaDigits(active.toString()) + "টি চলমান হিসাব"
+    }
+}
+
 @Composable
-private fun SegmentedToggleOnHero(showReceivable: Boolean, onToggle: (Boolean) -> Unit) {
+private fun DirectionSwitch(showReceivable: Boolean, onToggle: (Boolean) -> Unit) {
+    val extras = MaterialTheme.bokeya
     Surface(
-        color = Color.White.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(14.dp),
+        color = Color.White.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(Radius.pill),
     ) {
         Row(Modifier.padding(3.dp)) {
             listOf("আমি দেব" to false, "আমি পাব" to true).forEach { (label, value) ->
                 val selected = showReceivable == value
+                val alpha by animateFloatAsState(
+                    if (selected) 1f else 0f,
+                    tween(Durations.standard),
+                    label = "switch",
+                )
                 Box(
                     Modifier
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(if (selected) Color.White.copy(alpha = 0.92f) else Color.Transparent)
+                        .clip(RoundedCornerShape(Radius.pill))
+                        .background(Color.White.copy(alpha = alpha * 0.95f))
                         .clickable { onToggle(value) }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = Space.lg, vertical = Space.sm + 1.dp),
                 ) {
                     Text(
                         label,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (selected) MaterialTheme.bokeya.heroStart else Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.SemiBold,
+                        color = if (selected) extras.heroStart else extras.onHeroMuted,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                     )
                 }
             }
@@ -305,61 +408,186 @@ private fun SegmentedToggleOnHero(showReceivable: Boolean, onToggle: (Boolean) -
     }
 }
 
+/** Full-width stacked bar + 2×2 legend grid. Fills the hero's lower band with real information. */
 @Composable
-private fun BreakdownPill(label: String, amount: Money) {
-    Surface(
-        color = Color.White.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(12.dp),
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.7f),
+private fun HeroComposition(state: DashboardState) {
+    val extras = MaterialTheme.bokeya
+    val series = listOf(
+        Triple(AccountType.SHOP, "দোকান", Color(0xFF9FE3D0)),
+        Triple(AccountType.LOAN, "Loan", Color(0xFF7FC9EA)),
+        Triple(AccountType.EMI, "EMI", Color(0xFFF3C98B)),
+        Triple(AccountType.PERSONAL, "ব্যক্তিগত", Color(0xFFC7B7EF)),
+    )
+    val entries = series.map { (type, label, color) ->
+        Triple(label, state.breakdown[type] ?: Money.ZERO, color)
+    }
+    val present = entries.filter { it.second.isPositive }
+
+    if (present.isEmpty()) return
+
+    Column {
+        StackedBar(
+            slices = present.map { Slice(it.first, it.second.poisha, it.third) },
+            height = 10.dp,
+            trackColor = Color.White.copy(alpha = 0.14f),
+        )
+        Spacer(Modifier.height(Space.lg))
+        // Two columns keep every legend cell wide enough for a full amount — no truncation,
+        // no horizontal scroll, no leftover gutter on the right.
+        present.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.md)) {
+                row.forEach { (label, money, color) ->
+                    LegendItem(
+                        color = color,
+                        label = label,
+                        value = CurrencyFormatter.format(money),
+                        labelColor = extras.onHeroMuted,
+                        valueColor = extras.onHero,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+            if (row != present.chunked(2).last()) Spacer(Modifier.height(Space.md))
+        }
+    }
+}
+
+@Composable
+private fun HeroReceivableNote(state: DashboardState) {
+    val extras = MaterialTheme.bokeya
+    CanvasInset(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Handshake,
+                null,
+                tint = extras.onHeroMuted,
+                modifier = Modifier.size(IconSize.md),
             )
-            MoneyText(
-                amount,
-                style = MaterialTheme.typography.titleSmall,
-                color = Color.White,
+            Spacer(Modifier.width(Space.md))
+            Text(
+                if (state.receivableCount == 0) {
+                    "কেউ আপনার কাছে ঋণী নন।"
+                } else {
+                    "টাকা ফেরত পাওয়ার তারিখ এলে মনে করিয়ে দেওয়া হবে।"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = extras.onHeroMuted,
             )
         }
     }
 }
 
 @Composable
-private fun OverdueCard(state: DashboardState, onClick: () -> Unit) {
+private fun NextPaymentStrip(next: UpcomingPayment, onClick: () -> Unit) {
     val extras = MaterialTheme.bokeya
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = extras.dangerContainer,
-        modifier = Modifier.fillMaxWidth(),
+    val days = ChronoUnit.DAYS.between(Clocks.today(), next.dueDate)
+    val when_ = when {
+        days < 0L -> "তারিখ পেরিয়েছে"
+        days == 0L -> "আজ"
+        days == 1L -> "আগামীকাল"
+        else -> BanglaNumbers.toBanglaDigits(days.toString()) + " দিন পর"
+    }
+    CanvasInset(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.md))
+            .clickable(onClick = onClick),
+        contentPadding = PaddingValues(horizontal = Space.md, vertical = Space.md),
     ) {
-        Row(
-            Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Eyebrow("পরবর্তী পরিশোধ", color = extras.onHeroMuted)
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    next.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = extras.onHero,
+                    maxLines = 1,
+                )
+            }
+            Spacer(Modifier.width(Space.md))
+            Column(horizontalAlignment = Alignment.End) {
+                MoneyText(
+                    next.amount,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = extras.onHero,
+                )
+                Text(
+                    when_,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = extras.onHeroMuted,
+                )
+            }
+            Spacer(Modifier.width(Space.sm))
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "বিস্তারিত",
+                tint = extras.onHeroMuted,
+                modifier = Modifier.size(IconSize.sm),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReceivableGlyph(count: Int, tint: Color) {
+    Box(
+        Modifier
+            .size(92.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.10f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                BanglaNumbers.toBanglaDigits(count.toString()),
+                style = MaterialTheme.typography.headlineMedium,
+                color = tint,
+            )
+            Text("জন", style = MaterialTheme.typography.labelSmall, color = tint.copy(alpha = 0.75f))
+        }
+    }
+}
+
+// ---------------------------------------------------------------- overdue
+
+@Composable
+private fun OverdueBanner(state: DashboardState, onClick: () -> Unit) {
+    val extras = MaterialTheme.bokeya
+    BokeyaToneCard(
+        tone = extras.danger,
+        container = extras.dangerContainer,
+        onClick = onClick,
+        contentPadding = Space.lg,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
-                    .size(40.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
-                    .background(extras.danger.copy(alpha = 0.15f)),
+                    .background(extras.danger.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.WarningAmber, null, tint = extras.danger, modifier = Modifier.size(22.dp))
+                Icon(
+                    Icons.Filled.PriorityHigh,
+                    null,
+                    tint = extras.danger,
+                    modifier = Modifier.size(IconSize.sm),
+                )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(Space.md))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "${BanglaNumbers.toBanglaDigits(state.overdue.size.toString())}টি হিসাবের তারিখ পেরিয়েছে",
+                    BanglaNumbers.toBanglaDigits(state.overdue.size.toString()) +
+                        "টি হিসাবের তারিখ পেরিয়েছে",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
                     color = extras.danger,
                 )
                 Text(
-                    "দেখে নিন কোনগুলো বাকি রয়ে গেছে",
+                    "আগে এগুলো দেখে নিন",
                     style = MaterialTheme.typography.bodySmall,
-                    color = extras.danger.copy(alpha = 0.8f),
+                    color = extras.danger.copy(alpha = 0.78f),
                 )
             }
             MoneyText(
@@ -371,107 +599,67 @@ private fun OverdueCard(state: DashboardState, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun TodayCard(state: DashboardState) {
-    BokeyaCard {
-        Text("আজকের হিসাব", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TodayTile("দিতে হবে", state.today.toPay, MaterialTheme.bokeya.moneyOut, Modifier.weight(1f))
-            TodayTile("পাবেন", state.today.toReceive, MaterialTheme.bokeya.moneyIn, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TodayTile("আয়", state.today.income, MaterialTheme.bokeya.moneyIn, Modifier.weight(1f))
-            TodayTile("খরচ", state.today.expense, MaterialTheme.bokeya.moneyOut, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(12.dp))
-        InfoRow(
-            "আজকের Net",
-            "",
-            valueColor = MaterialTheme.colorScheme.onSurface,
-        )
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 0.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            MoneyText(
-                state.today.net,
-                style = MaterialTheme.typography.titleMedium,
-                signed = true,
-                color = if (state.today.net.isNegative) {
-                    MaterialTheme.bokeya.moneyOut
-                } else {
-                    MaterialTheme.bokeya.moneyIn
-                },
-            )
-        }
-    }
-}
+// ---------------------------------------------------------------- today
 
+/**
+ * Two primary money figures get real estate; income/expense sit below as secondary inline stats
+ * separated by a hairline. Four identical tiles would flatten the hierarchy, so we don't.
+ */
 @Composable
-private fun TodayTile(label: String, amount: Money, color: Color, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-        shape = RoundedCornerShape(14.dp),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.bokeya.muted)
-            Spacer(Modifier.height(3.dp))
-            MoneyText(amount, style = MaterialTheme.typography.titleMedium, color = color)
-        }
-    }
-}
-
-@Composable
-private fun HealthCard(state: DashboardState) {
+private fun TodaySection(state: DashboardState) {
     val extras = MaterialTheme.bokeya
-    val (color, container) = when (state.health) {
-        HealthLevel.GOOD -> extras.success to extras.successContainer
-        HealthLevel.ATTENTION -> extras.warning to extras.warningContainer
-        HealthLevel.HIGH_LOAD -> extras.danger to extras.dangerContainer
-    }
-    BokeyaCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
+    val today = state.today
+
+    BokeyaSection(title = "আজকের হিসাব", subtitle = BanglaDate.dayMonth(Clocks.today())) {
+        BokeyaCard(contentPadding = Space.lg) {
+            Row(
                 Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "আপনার আর্থিক অবস্থা",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.bokeya.muted,
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(state.health.label, style = MaterialTheme.typography.headlineSmall, color = color)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            state.healthMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.bokeya.muted,
-        )
-        if (state.weekTotal.isPositive) {
-            Spacer(Modifier.height(12.dp))
-            Surface(color = container, shape = RoundedCornerShape(12.dp)) {
-                Row(
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+            ) {
+                PrimaryStat(
+                    label = "দিতে হবে",
+                    amount = today.toPay,
+                    color = if (today.toPay.isPositive) extras.moneyOut else extras.faint,
+                    icon = Icons.Filled.ArrowUpward,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
                     Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 9.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "আগামী ৭ দিনে",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = color,
+                        .width(1.dp)
+                        .fillMaxHeight()
+                        .background(extras.divider),
+                )
+                PrimaryStat(
+                    label = "পাবেন",
+                    amount = today.toReceive,
+                    color = if (today.toReceive.isPositive) extras.moneyIn else extras.faint,
+                    icon = Icons.Filled.ArrowDownward,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = Space.lg),
+                )
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(extras.divider))
+            Spacer(Modifier.height(Space.md))
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                InlineStat("আয়", today.income, extras.moneyIn, Modifier.weight(1f))
+                InlineStat("খরচ", today.expense, extras.moneyOut, Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.End) {
+                    Eyebrow("Net")
+                    MoneyText(
+                        today.net,
+                        style = MaterialTheme.typography.titleMedium,
+                        signed = true,
+                        color = when {
+                            today.net.isNegative -> extras.moneyOut
+                            today.net.isPositive -> extras.moneyIn
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
                     )
-                    MoneyText(state.weekTotal, style = MaterialTheme.typography.labelLarge, color = color)
                 }
             }
         }
@@ -479,157 +667,292 @@ private fun HealthCard(state: DashboardState) {
 }
 
 @Composable
-fun InsightCard(text: String, tone: InsightTone) {
-    val extras = MaterialTheme.bokeya
-    val color = when (tone) {
-        InsightTone.POSITIVE -> extras.success
-        InsightTone.WARNING -> extras.warning
-        InsightTone.NEUTRAL -> MaterialTheme.colorScheme.primary
-    }
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = color.copy(alpha = 0.08f),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-            Icon(
-                Icons.Filled.Lightbulb,
-                null,
-                tint = color,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium)
+private fun PrimaryStat(
+    label: String,
+    amount: Money,
+    color: Color,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(IconSize.xs))
+            Spacer(Modifier.width(Space.xs + 2.dp))
+            Eyebrow(label)
         }
+        Spacer(Modifier.height(Space.xs + 2.dp))
+        MoneyText(amount, style = MaterialTheme.typography.headlineSmall, color = color)
     }
 }
 
 @Composable
-private fun MonthCard(state: DashboardState) {
-    BokeyaCard {
-        Text(
-            "এই মাস · " + BanglaDate.monthName(Clocks.today().monthValue),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(12.dp))
-        MonthRow("আয়", state.month.income, MaterialTheme.bokeya.moneyIn, Icons.Filled.TrendingUp)
-        MonthRow("খরচ", state.month.expense, MaterialTheme.bokeya.moneyOut, Icons.Filled.TrendingDown)
-        MonthRow("পরিশোধ", state.month.debtPayments, MaterialTheme.colorScheme.primary, Icons.Filled.ArrowUpward)
-        MonthRow("নতুন বকেয়া", state.month.newDebt, MaterialTheme.bokeya.muted, Icons.Filled.ArrowDownward)
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Net cash flow", style = MaterialTheme.typography.labelMedium)
-                MoneyText(
-                    state.month.net,
-                    style = MaterialTheme.typography.titleSmall,
-                    signed = true,
-                    color = if (state.month.net.isNegative) {
-                        MaterialTheme.bokeya.moneyOut
-                    } else {
-                        MaterialTheme.bokeya.moneyIn
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthRow(label: String, amount: Money, color: Color, icon: ImageVector) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+private fun InlineStat(label: String, amount: Money, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Eyebrow(label)
         MoneyText(amount, style = MaterialTheme.typography.bodyLarge, color = color)
     }
 }
 
+// ---------------------------------------------------------------- insight
+
 @Composable
-private fun DebtFreeCard(state: DashboardState) {
-    BokeyaCard {
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("পরিশোধের অগ্রগতি", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Text(
-                BanglaNumbers.toBanglaDigits(((state.debtFreeProgress * 100).toInt()).toString()) + "%",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+private fun InsightPanel(text: String, tone: InsightTone, more: List<String>) {
+    val extras = MaterialTheme.bokeya
+    val (accent, container) = when (tone) {
+        InsightTone.WARNING -> extras.warning to extras.warningContainer
+        InsightTone.POSITIVE -> extras.success to extras.successContainer
+        InsightTone.NEUTRAL -> extras.info to extras.infoContainer
+    }
+    BokeyaToneCard(tone = accent, container = container) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                Icons.Filled.Insights,
+                null,
+                tint = accent,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .size(IconSize.md),
             )
-        }
-        Spacer(Modifier.height(10.dp))
-        BokeyaProgress(state.debtFreeProgress)
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Spacer(Modifier.width(Space.md))
             Column {
-                Text("পরিশোধ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.bokeya.muted)
-                MoneyText(state.totalPaid, style = MaterialTheme.typography.bodyLarge)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("মোট", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.bokeya.muted)
-                MoneyText(state.totalObligations, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                more.take(2).forEach { extra ->
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        extra,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.bokeya.muted,
+                    )
+                }
             }
         }
     }
 }
+
+/** Public: reused by the planner and overdue screens. */
+@Composable
+fun InsightCard(text: String, tone: InsightTone, modifier: Modifier = Modifier) {
+    val extras = MaterialTheme.bokeya
+    val (accent, container) = when (tone) {
+        InsightTone.WARNING -> extras.warning to extras.warningContainer
+        InsightTone.POSITIVE -> extras.success to extras.successContainer
+        InsightTone.NEUTRAL -> extras.info to extras.infoContainer
+    }
+    BokeyaToneCard(tone = accent, container = container, modifier = modifier) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                Icons.Filled.Insights,
+                null,
+                tint = accent,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .size(IconSize.md),
+            )
+            Spacer(Modifier.width(Space.md))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------- month
+
+@Composable
+private fun MonthSection(state: DashboardState) {
+    val extras = MaterialTheme.bokeya
+    val month = state.month
+    val today = Clocks.today()
+    val hasTrend = state.netTrend.count { it != 0L } >= 2
+
+    BokeyaSection(title = "এই মাস", subtitle = BanglaDate.monthYear(today)) {
+        Column {
+            ComparisonBars(
+                leftLabel = "আয়",
+                leftValue = month.income.poisha,
+                leftColor = extras.moneyIn,
+                leftText = CurrencyFormatter.format(month.income),
+                rightLabel = "খরচ",
+                rightValue = month.expense.poisha,
+                rightColor = extras.moneyOut,
+                rightText = CurrencyFormatter.format(month.expense),
+            )
+
+            Spacer(Modifier.height(Space.lg))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Eyebrow("Net cash flow")
+                    MoneyText(
+                        month.net,
+                        style = MaterialTheme.typography.headlineSmall,
+                        signed = true,
+                        color = if (month.net.isNegative) extras.moneyOut else extras.moneyIn,
+                    )
+                }
+                if (hasTrend) {
+                    Sparkline(
+                        values = state.netTrend,
+                        modifier = Modifier
+                            .width(96.dp)
+                            .height(38.dp),
+                        color = if (month.net.isNegative) extras.moneyOut else extras.moneyIn,
+                        contentDescription = "গত ছয় মাসের ধারা",
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Space.lg))
+
+            BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs)) {
+                MonthRow("বকেয়া পরিশোধ", month.debtPayments, extras.moneyIn)
+                RowDivider(inset = Space.md)
+                MonthRow("নতুন বকেয়া", month.newDebt, extras.muted)
+                month.topExpenseCategory?.let {
+                    RowDivider(inset = Space.md)
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Space.md, vertical = Space.md),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            "সবচেয়ে বেশি খরচ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.bokeya.muted,
+                        )
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            HealthRow(state)
+        }
+    }
+}
+
+@Composable
+private fun MonthRow(label: String, amount: Money, color: Color) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.md, vertical = Space.md),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.bokeya.muted)
+        MoneyText(amount, style = MaterialTheme.typography.bodyMedium, color = color)
+    }
+}
+
+/**
+ * Financial health: an organization indicator, phrased as an observation. Deliberately a quiet
+ * inline row, not a scored gauge, so it can never be mistaken for a credit rating.
+ */
+@Composable
+private fun HealthRow(state: DashboardState) {
+    val extras = MaterialTheme.bokeya
+    val (dot, label) = when (state.health) {
+        HealthLevel.GOOD -> extras.success to "ভালো"
+        HealthLevel.ATTENTION -> extras.warning to "মনোযোগ দরকার"
+        HealthLevel.HIGH_LOAD -> extras.danger to "চাপ বেশি"
+    }
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(dot),
+        )
+        Spacer(Modifier.width(Space.sm))
+        Text(
+            "আর্থিক অবস্থা · $label",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.width(Space.sm))
+        Text(
+            state.healthMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = extras.faint,
+            maxLines = 2,
+        )
+    }
+}
+
+// ---------------------------------------------------------------- first run
+
+@Composable
+private fun FirstRunPanel(onQuickAction: (String) -> Unit) {
+    Column {
+        BokeyaCanvas(contentPadding = PaddingValues(Space.xl)) {
+            Text(
+                "আপনার হিসাব শুরু করুন",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.bokeya.onHero,
+            )
+            Spacer(Modifier.height(Space.sm))
+            Text(
+                "যা দিতে হবে আর যা পাবেন — দুটোই এক জায়গায় থাকবে। " +
+                    "প্রথম হিসাবটি যোগ করলেই এখানে সব দেখতে পাবেন।",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.bokeya.onHeroMuted,
+            )
+        }
+        Spacer(Modifier.height(Space.xl))
+        BokeyaSection(title = "শুরু করুন") {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                QuickAction(Icons.Filled.Storefront, "বাকি", { onQuickAction("shop") })
+                QuickAction(Icons.Filled.Handshake, "ধার", { onQuickAction("personal") })
+                QuickAction(Icons.Filled.AccountBalance, "Loan", { onQuickAction("loan") })
+                QuickAction(Icons.Filled.CreditCard, "EMI", { onQuickAction("emi") })
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- shared rows
 
 @Composable
 fun UpcomingRow(payment: UpcomingPayment, onClick: () -> Unit) {
-    val today = Clocks.today()
-    val overdue = payment.dueDate.isBefore(today)
     val extras = MaterialTheme.bokeya
-    BokeyaCard(onClick = onClick, contentPadding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    iconFor(payment.type),
-                    null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(19.dp),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    payment.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                )
-                Text(
-                    payment.type.label + " · " + BanglaDate.relative(payment.dueDate, today),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (overdue) extras.danger else MaterialTheme.bokeya.muted,
-                )
-            }
-            MoneyText(payment.amount, style = MaterialTheme.typography.titleSmall)
-        }
+    val today = Clocks.today()
+    val days = ChronoUnit.DAYS.between(today, payment.dueDate)
+    val (tint, when_) = when {
+        days < 0L -> extras.danger to "পেরিয়ে গেছে"
+        days == 0L -> extras.warning to "আজ"
+        days == 1L -> extras.warning to "আগামীকাল"
+        days <= 7L -> extras.info to (BanglaNumbers.toBanglaDigits(days.toString()) + " দিন পর")
+        else -> extras.muted to BanglaDate.dayMonth(payment.dueDate)
     }
-}
 
-fun iconFor(type: AccountType): ImageVector = when (type) {
-    AccountType.SHOP -> Icons.Filled.Storefront
-    AccountType.LOAN -> Icons.Filled.AccountBalance
-    AccountType.EMI -> Icons.Filled.CreditCard
-    AccountType.PERSONAL -> Icons.Filled.People
+    BokeyaRow(
+        title = payment.title,
+        subtitle = payment.type.label + " · " + when_,
+        onClick = onClick,
+        leading = {
+            IconBadge(icon = iconFor(payment.type), tint = tint, size = 40.dp)
+        },
+        trailing = {
+            MoneyText(payment.amount, style = MaterialTheme.typography.titleSmall)
+        },
+    )
 }
 
 @Composable
@@ -642,64 +965,33 @@ fun TransactionRow(
     onClick: (() -> Unit)? = null,
 ) {
     val extras = MaterialTheme.bokeya
-    val income = type.flow == com.shohankhan.bokeya.domain.MoneyFlow.MONEY_IN
-    val color = when (type.flow) {
-        com.shohankhan.bokeya.domain.MoneyFlow.MONEY_IN -> extras.moneyIn
-        com.shohankhan.bokeya.domain.MoneyFlow.MONEY_OUT -> extras.moneyOut
-        com.shohankhan.bokeya.domain.MoneyFlow.NONE -> MaterialTheme.bokeya.muted
-    }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(color.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                if (income) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
-                null,
-                tint = color,
-                modifier = Modifier.size(16.dp),
+    val incoming = type == TxType.INCOME || type == TxType.RECEIVED
+    val tint = if (incoming) extras.moneyIn else extras.moneyOut
+
+    BokeyaRow(
+        title = title,
+        subtitle = subtitle + " · " + BanglaDate.relative(date),
+        onClick = onClick,
+        leading = {
+            IconBadge(
+                icon = if (incoming) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                tint = tint,
+                size = 40.dp,
             )
-        }
-        Spacer(Modifier.width(11.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+        },
+        trailing = {
             Text(
-                "$subtitle · ${BanglaDate.dayMonth(date)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.bokeya.muted,
+                (if (incoming) "+" else "−") + CurrencyFormatter.format(amount),
+                style = MaterialTheme.typography.titleSmall,
+                color = tint,
             )
-        }
-        Text(
-            (if (income) "+" else "−") + com.shohankhan.bokeya.core.CurrencyFormatter.format(amount),
-            style = MaterialTheme.typography.titleSmall,
-            color = color,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
+        },
+    )
 }
 
-@Composable
-private fun QuickActionsRow(onQuickAction: (String) -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        QuickAction(Icons.Filled.Storefront, "বাকি", { onQuickAction("shop") })
-        QuickAction(Icons.Filled.AccountBalance, "Loan", { onQuickAction("loan") })
-        QuickAction(Icons.Filled.CreditCard, "EMI", { onQuickAction("emi") })
-        QuickAction(Icons.Filled.People, "ধার", { onQuickAction("personal") })
-        QuickAction(Icons.Filled.TrendingUp, "আয়", { onQuickAction("income") })
-        QuickAction(Icons.Filled.TrendingDown, "খরচ", { onQuickAction("expense") })
-    }
+fun iconFor(type: AccountType): ImageVector = when (type) {
+    AccountType.SHOP -> Icons.Filled.Storefront
+    AccountType.LOAN -> Icons.Filled.AccountBalance
+    AccountType.EMI -> Icons.Filled.CreditCard
+    AccountType.PERSONAL -> Icons.Filled.Handshake
 }

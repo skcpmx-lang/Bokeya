@@ -28,17 +28,18 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -74,6 +75,13 @@ import com.shohankhan.bokeya.AppContainer
 import com.shohankhan.bokeya.data.repo.BokeyaSettings
 import com.shohankhan.bokeya.domain.AccountType
 import com.shohankhan.bokeya.notifications.DeepLinks
+import com.shohankhan.bokeya.ui.components.BokeyaDock
+import com.shohankhan.bokeya.ui.components.DockItem
+import com.shohankhan.bokeya.ui.components.QuickAddAction
+import com.shohankhan.bokeya.ui.components.QuickAddSheet
+import com.shohankhan.bokeya.ui.components.QuickAddTone
+import com.shohankhan.bokeya.ui.theme.Radius
+import com.shohankhan.bokeya.ui.theme.Space
 import com.shohankhan.bokeya.ui.screens.AboutScreen
 import com.shohankhan.bokeya.ui.screens.AccountDetailScreen
 import com.shohankhan.bokeya.ui.screens.AccountsScreen
@@ -149,7 +157,7 @@ private fun MainShell(
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var fabExpanded by remember { mutableStateOf(false) }
+    var showQuickAdd by remember { mutableStateOf(false) }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -174,7 +182,7 @@ private fun MainShell(
     }
 
     fun go(route: String) {
-        fabExpanded = false
+        showQuickAdd = false
         navController.navigate(route)
     }
 
@@ -190,15 +198,19 @@ private fun MainShell(
                 enter = fadeIn(tween(Motion.SHORT)),
                 exit = fadeOut(tween(Motion.SHORT)),
             ) {
-                BokeyaBottomBar(navController, currentRoute)
-            }
-        },
-        floatingActionButton = {
-            if (showBottomBar) {
-                ExpandableFab(
-                    expanded = fabExpanded,
-                    onToggle = { fabExpanded = !fabExpanded },
-                    onAction = { go(it) },
+                BokeyaDock(
+                    items = bottomTabs.map { DockItem(it.route, it.label, it.icon) },
+                    currentRoute = currentRoute,
+                    onSelect = { route ->
+                        if (route != currentRoute) {
+                            navController.navigate(route) {
+                                popUpTo(Route.Home.path) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    },
+                    onAdd = { showQuickAdd = true },
                 )
             }
         },
@@ -483,25 +495,54 @@ private fun MainShell(
                 }
             }
 
-            // Scrim behind the expanded FAB menu
-            AnimatedVisibility(
-                visible = fabExpanded,
-                enter = fadeIn(tween(Motion.SHORT)),
-                exit = fadeOut(tween(Motion.SHORT)),
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .clickable { fabExpanded = false },
-                )
-            }
         }
+    }
+
+    if (showQuickAdd) {
+        QuickAddBottomSheet(
+            onDismiss = { showQuickAdd = false },
+            onAction = { key -> go(routeForQuickAction(key)) },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickAddBottomSheet(onDismiss: () -> Unit, onAction: (String) -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.bokeya.surface3,
+        shape = RoundedCornerShape(topStart = Radius.sheet, topEnd = Radius.sheet),
+        dragHandle = {
+            Box(
+                Modifier
+                    .padding(top = Space.md, bottom = Space.sm)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(Radius.pill))
+                    .background(MaterialTheme.bokeya.divider),
+            )
+        },
+    ) {
+        QuickAddSheet(
+            actions = listOf(
+                QuickAddAction("shop", "দোকানের বাকি", "বাজার বা দোকানে বাকি রাখলেন", Icons.Filled.Storefront, QuickAddTone.NEUTRAL),
+                QuickAddAction("personal", "ব্যক্তিগত ধার", "কাউকে দিলেন বা কারও থেকে নিলেন", Icons.Filled.Handshake, QuickAddTone.NEUTRAL),
+                QuickAddAction("loan", "Loan", "ব্যাংক বা NGO-র ঋণ", Icons.Filled.AccountBalance, QuickAddTone.NEUTRAL),
+                QuickAddAction("emi", "EMI", "কিস্তিতে কেনা জিনিস", Icons.Filled.CreditCard, QuickAddTone.NEUTRAL),
+                QuickAddAction("income", "আয়", "বেতন, ব্যবসা বা অন্য আয়", Icons.Filled.TrendingUp, QuickAddTone.INCOMING),
+                QuickAddAction("expense", "খরচ", "আজকের খরচ লিখে রাখুন", Icons.Filled.TrendingDown, QuickAddTone.OUTGOING),
+                QuickAddAction("pay", "পরিশোধ", "কোনো বকেয়া শোধ করুন", Icons.Filled.Payments, QuickAddTone.SETTLE),
+            ),
+            onAction = onAction,
+        )
     }
 }
 
 private fun routeForQuickAction(key: String) = when (key) {
     "shop" -> Route.AddShop.path
+    "pay" -> Route.Accounts.path
     "loan" -> Route.AddLoan.path
     "emi" -> Route.AddEmi.path
     "personal" -> Route.AddPersonal.path
@@ -514,116 +555,4 @@ private fun routeForType(type: AccountType) = when (type) {
     AccountType.LOAN -> Route.AddLoan.path
     AccountType.EMI -> Route.AddEmi.path
     AccountType.PERSONAL -> Route.AddPersonal.path
-}
-
-@Composable
-private fun BokeyaBottomBar(navController: NavHostController, currentRoute: String?) {
-    NavigationBar(
-        containerColor = MaterialTheme.bokeya.elevatedSurface,
-        tonalElevation = 0.dp,
-    ) {
-        bottomTabs.forEach { tab ->
-            val selected = currentRoute == tab.route
-            NavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (!selected) {
-                        navController.navigate(tab.route) {
-                            popUpTo(Route.Home.path) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                icon = { Icon(tab.icon, contentDescription = tab.label, Modifier.size(22.dp)) },
-                label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExpandableFab(
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    onAction: (String) -> Unit,
-) {
-    val actions = listOf(
-        Triple(Icons.Filled.Storefront, "বাকি", Route.AddShop.path),
-        Triple(Icons.Filled.Payments, "পরিশোধ", Route.Accounts.path),
-        Triple(Icons.Filled.AccountBalance, "Loan", Route.AddLoan.path),
-        Triple(Icons.Filled.CreditCard, "EMI", Route.AddEmi.path),
-        Triple(Icons.Filled.People, "ধার", Route.AddPersonal.path),
-        Triple(Icons.Filled.TrendingUp, "আয়", Route.AddIncome.path),
-        Triple(Icons.Filled.TrendingDown, "খরচ", Route.AddExpense.path),
-    )
-
-    Column(horizontalAlignment = Alignment.End) {
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(tween(Motion.SHORT)) + scaleIn(tween(Motion.MEDIUM), initialScale = 0.85f),
-            exit = fadeOut(tween(Motion.SHORT)) + scaleOut(tween(Motion.SHORT), targetScale = 0.85f),
-        ) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.padding(bottom = 14.dp),
-            ) {
-                actions.forEach { (icon, label, route) ->
-                    FabAction(icon, label) { onAction(route) }
-                }
-            }
-        }
-        FloatingActionButton(
-            onClick = onToggle,
-            shape = RoundedCornerShape(18.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-        ) {
-            Icon(
-                if (expanded) Icons.Filled.Close else Icons.Filled.Add,
-                contentDescription = if (expanded) "বন্ধ করুন" else "নতুন যোগ করুন",
-            )
-        }
-    }
-}
-
-@Composable
-private fun FabAction(icon: ImageVector, label: String, onClick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.bokeya.elevatedSurface,
-            shadowElevation = 2.dp,
-        ) {
-            Text(
-                label,
-                Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier
-                .size(46.dp)
-                .clickable(onClick = onClick),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-    }
 }

@@ -49,6 +49,14 @@ data class DashboardState(
     val debtFreeProgress: Float = 0f,
     val totalObligations: Money = Money.ZERO,
     val totalPaid: Money = Money.ZERO,
+    /** Nearest obligation, already prioritized. Drives the hero's right-hand column. */
+    val nextPayment: UpcomingPayment? = null,
+    /** Live account count per type, so the hero can say "৩টি হিসাব" honestly. */
+    val accountCounts: Map<AccountType, Int> = emptyMap(),
+    /** Net cash flow for the trailing six months, oldest first. Feeds the month sparkline. */
+    val netTrend: List<Long> = emptyList(),
+    val previousMonthExpense: Money = Money.ZERO,
+    val receivableCount: Int = 0,
 ) {
     val overdueTotal: Money get() = Money(overdue.sumOf { it.amount.poisha })
     val weekTotal: Money
@@ -158,6 +166,21 @@ class DashboardViewModel(
         val totalObligations = Money(iOwe.sumOf { it.total.poisha })
         val totalPaid = Money(iOwe.sumOf { it.paid.poisha })
 
+        val accountCounts = AccountType.entries.associateWith { type ->
+            iOwe.count { it.type == type && it.remaining.isPositive }
+        }
+
+        // Trailing six months of net cash flow, oldest first, for the month sparkline.
+        val netTrend = (5 downTo 0).map { back ->
+            val start = monthStart.minusMonths(back.toLong())
+            val end = start.plusMonths(1).minusDays(1)
+            val window = transactions.filter {
+                it.date >= start.toEpochDay() && it.date <= end.toEpochDay()
+            }
+            window.filter { it.type == TxType.INCOME }.sumOf { it.amount } -
+                window.filter { it.type == TxType.EXPENSE }.sumOf { it.amount }
+        }
+
         val insights = InsightEngine.generate(
             InsightEngine.Input(
                 today = today,
@@ -204,6 +227,11 @@ class DashboardViewModel(
             },
             totalObligations = totalObligations,
             totalPaid = totalPaid,
+            nextPayment = InsightEngine.prioritize(upcoming, today).firstOrNull(),
+            accountCounts = accountCounts,
+            netTrend = netTrend,
+            previousMonthExpense = prevExpense,
+            receivableCount = theyOwe.count { it.remaining.isPositive },
         )
     }
 
