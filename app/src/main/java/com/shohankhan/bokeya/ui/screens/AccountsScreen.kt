@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shohankhan.bokeya.core.BanglaDate
 import com.shohankhan.bokeya.core.BanglaNumbers
+import com.shohankhan.bokeya.core.CurrencyFormatter
 import com.shohankhan.bokeya.core.Clocks
 import com.shohankhan.bokeya.domain.AccountStatus
 import com.shohankhan.bokeya.domain.AccountSummary
@@ -54,6 +55,7 @@ import com.shohankhan.bokeya.ui.AccountFilter
 import com.shohankhan.bokeya.ui.AccountsViewModel
 import com.shohankhan.bokeya.ui.SortOrder
 import com.shohankhan.bokeya.ui.components.BokeyaCard
+import com.shohankhan.bokeya.ui.components.IconBadge
 import com.shohankhan.bokeya.ui.components.BokeyaProgress
 import com.shohankhan.bokeya.ui.components.EmptyState
 import com.shohankhan.bokeya.ui.components.MoneyText
@@ -172,7 +174,7 @@ fun AccountsScreen(
 @Composable
 private fun TypeChip(label: String, selected: Boolean, type: AccountType?, onClick: () -> Unit) {
     Surface(
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.bokeya.surface2,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
@@ -210,91 +212,76 @@ private fun TypeChip(label: String, selected: Boolean, type: AccountType?, onCli
 @Composable
 fun AccountCard(summary: AccountSummary, onClick: () -> Unit) {
     val extras = MaterialTheme.bokeya
-    BokeyaCard(onClick = onClick) {
+    val settled = summary.remaining.isZero && summary.total.isPositive
+    val accent = when {
+        settled -> extras.success
+        summary.status == AccountStatus.OVERDUE -> extras.danger
+        summary.status == AccountStatus.DUE_TODAY || summary.status == AccountStatus.DUE_SOON -> extras.warning
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    BokeyaCard(onClick = onClick, contentPadding = 16.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    iconFor(summary.type),
-                    null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            IconBadge(iconFor(summary.type), accent, size = 42.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(summary.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
                 Text(
                     listOfNotNull(summary.subtitle, summary.direction.label).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
-                    color = extras.muted,
+                    color = extras.faint,
                     maxLines = 1,
                 )
             }
-            StatusBadge(summary.status)
-        }
-
-        Spacer(Modifier.height(14.dp))
-
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            Column {
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                MoneyText(
+                    summary.remaining,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (settled) extras.success else MaterialTheme.colorScheme.onSurface,
+                )
                 Text(
                     if (summary.direction == Direction.I_OWE) "বাকি" else "পাওনা",
                     style = MaterialTheme.typography.labelSmall,
-                    color = extras.muted,
-                )
-                MoneyText(
-                    summary.remaining,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = if (summary.remaining.isZero) extras.success else MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            if (summary.total.isPositive) {
-                Text(
-                    BanglaNumbers.toBanglaDigits(summary.progressPercent.toString()) + "% পরিশোধ",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = extras.muted,
+                    color = extras.faint,
                 )
             }
         }
 
-        if (summary.total.isPositive) {
-            Spacer(Modifier.height(9.dp))
-            BokeyaProgress(
-                summary.progress,
-                color = if (summary.remaining.isZero) extras.success else MaterialTheme.colorScheme.primary,
-                height = 6.dp,
-            )
-        }
-
-        if (summary.nextDueDate != null && summary.nextDueAmount != null && !summary.remaining.isZero) {
-            Spacer(Modifier.height(12.dp))
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+        if (summary.total.isPositive && !settled) {
+            Spacer(Modifier.height(14.dp))
+            BokeyaProgress(summary.progress, height = 5.dp, color = accent)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Text(
+                    BanglaNumbers.toBanglaDigits(summary.progressPercent.toString()) +
+                        "% পরিশোধ · মোট " + CurrencyFormatter.format(summary.total),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = extras.faint,
+                )
+                if (summary.nextDueDate != null && summary.nextDueAmount != null) {
                     Text(
-                        "পরবর্তী · " + BanglaDate.relative(summary.nextDueDate, Clocks.today()),
-                        style = MaterialTheme.typography.labelMedium,
+                        BanglaDate.relative(summary.nextDueDate, Clocks.today()) + " · " +
+                            CurrencyFormatter.format(summary.nextDueAmount),
+                        style = MaterialTheme.typography.labelSmall,
                         color = if (summary.status == AccountStatus.OVERDUE) extras.danger else extras.muted,
                     )
-                    MoneyText(summary.nextDueAmount, style = MaterialTheme.typography.labelLarge)
                 }
+            }
+        } else if (settled) {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusBadge(summary.status, compact = true)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "মোট " + CurrencyFormatter.format(summary.total),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = extras.faint,
+                )
             }
         }
     }

@@ -214,7 +214,7 @@ private fun PinKey(digit: String, onClick: () -> Unit) {
     val haptics = LocalHapticFeedback.current
     Surface(
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        color = MaterialTheme.bokeya.surface2,
         modifier = Modifier
             .size(70.dp)
             .clickable {

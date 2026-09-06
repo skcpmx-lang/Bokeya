@@ -301,7 +301,7 @@ private fun DayTile(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = MaterialTheme.bokeya.surface2,
         shape = RoundedCornerShape(12.dp),
     ) {
         Column(Modifier.padding(10.dp)) {

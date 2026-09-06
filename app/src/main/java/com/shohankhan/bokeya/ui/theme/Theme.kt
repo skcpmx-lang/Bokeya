@@ -122,7 +122,6 @@ data class BokeyaColors(
     val series: List<Color>,
 ) {
     @Deprecated("Use surface2", ReplaceWith("surface2"))
-    val elevatedSurface: Color get() = surface2
 }
 
 private val LightExtras = BokeyaColors(
@@ -366,13 +365,6 @@ object Durations {
     const val deliberate = 620
 }
 
-object BokeyaShapes {
-    val card = Radius.lg
-    val sheet = Radius.sheet
-    val chip = Radius.sm
-    val button = Radius.md
-    val field = Radius.md
-}
 
 // ---------------------------------------------------------------- entry point
 

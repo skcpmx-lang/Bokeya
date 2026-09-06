@@ -153,12 +153,17 @@ fun DashboardScreen(
         }
 
         item("hero") {
-            HeroOverview(
-                state = state,
-                showReceivable = showReceivable,
-                onToggle = { showReceivable = it },
-                onNextClick = { state.nextPayment?.let { onAccountClick(it.accountId) } },
-            )
+            Column {
+                HeroOverview(
+                    state = state,
+                    showReceivable = showReceivable,
+                    onToggle = { showReceivable = it },
+                )
+                state.nextPayment?.takeIf { !showReceivable }?.let { next ->
+                    Spacer(Modifier.height(Space.sm))
+                    NextPaymentStrip(next) { onAccountClick(next.accountId) }
+                }
+            }
         }
 
         item("today") { TodaySection(state) }
@@ -281,7 +286,6 @@ private fun HeroOverview(
     state: DashboardState,
     showReceivable: Boolean,
     onToggle: (Boolean) -> Unit,
-    onNextClick: () -> Unit,
 ) {
     val extras = MaterialTheme.bokeya
     val amount = if (showReceivable) state.totalTheyOwe else state.totalIOwe
@@ -312,7 +316,7 @@ private fun HeroOverview(
                         animate = true,
                     )
                 }
-                Spacer(Modifier.height(Space.sm))
+                Spacer(Modifier.height(Space.xs + 2.dp))
                 Text(
                     text = heroCaption(state, showReceivable),
                     style = MaterialTheme.typography.bodySmall,
@@ -347,12 +351,6 @@ private fun HeroOverview(
             HeroComposition(state)
         } else {
             HeroReceivableNote(state)
-        }
-
-        // Next obligation lives inside the hero: it is the single most actionable fact here.
-        state.nextPayment?.takeIf { !showReceivable }?.let { next ->
-            Spacer(Modifier.height(Space.md))
-            NextPaymentStrip(next, onNextClick)
         }
     }
 }
@@ -430,25 +428,52 @@ private fun HeroComposition(state: DashboardState) {
             height = 10.dp,
             trackColor = Color.White.copy(alpha = 0.14f),
         )
-        Spacer(Modifier.height(Space.lg))
-        // Two columns keep every legend cell wide enough for a full amount — no truncation,
-        // no horizontal scroll, no leftover gutter on the right.
-        present.chunked(2).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.md)) {
-                row.forEach { (label, money, color) ->
-                    LegendItem(
-                        color = color,
-                        label = label,
-                        value = CurrencyFormatter.format(money),
-                        labelColor = extras.onHeroMuted,
-                        valueColor = extras.onHero,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(Space.md))
+        // One row across the full width: each present category gets an equal share, so the
+        // bar and its legend align and no gutter is left stranded on the right.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            present.forEach { (label, money, color) ->
+                HeroLegendCell(
+                    color = color,
+                    label = label,
+                    value = CurrencyFormatter.format(money),
+                    modifier = Modifier.weight(1f),
+                )
             }
-            if (row != present.chunked(2).last()) Spacer(Modifier.height(Space.md))
         }
+    }
+}
+
+/** Compact legend cell: a colour tick over label and amount, stacked to stay narrow. */
+@Composable
+private fun HeroLegendCell(
+    color: Color,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    val extras = MaterialTheme.bokeya
+    Column(modifier) {
+        Box(
+            Modifier
+                .width(18.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(Radius.pill))
+                .background(color),
+        )
+        Spacer(Modifier.height(Space.sm))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = extras.onHeroMuted,
+            maxLines = 1,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.labelLarge,
+            color = extras.onHero,
+            maxLines = 1,
+        )
     }
 }
 
@@ -481,50 +506,51 @@ private fun HeroReceivableNote(state: DashboardState) {
 private fun NextPaymentStrip(next: UpcomingPayment, onClick: () -> Unit) {
     val extras = MaterialTheme.bokeya
     val days = ChronoUnit.DAYS.between(Clocks.today(), next.dueDate)
-    val when_ = when {
+    val urgent = days <= 1L
+    val whenText = when {
         days < 0L -> "তারিখ পেরিয়েছে"
-        days == 0L -> "আজ"
+        days == 0L -> "আজ দিতে হবে"
         days == 1L -> "আগামীকাল"
         else -> BanglaNumbers.toBanglaDigits(days.toString()) + " দিন পর"
     }
-    CanvasInset(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radius.md))
-            .clickable(onClick = onClick),
-        contentPadding = PaddingValues(horizontal = Space.md, vertical = Space.md),
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(Radius.lg),
+        color = if (urgent) extras.warningContainer else extras.surface2,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (urgent) extras.warning.copy(alpha = 0.22f) else extras.hairline,
+        ),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.padding(horizontal = Space.lg, vertical = Space.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconBadge(
+                icon = iconFor(next.type),
+                tint = if (urgent) extras.warning else MaterialTheme.colorScheme.primary,
+                size = 36.dp,
+            )
+            Spacer(Modifier.width(Space.md))
             Column(Modifier.weight(1f)) {
-                Eyebrow("পরবর্তী পরিশোধ", color = extras.onHeroMuted)
-                Spacer(Modifier.height(3.dp))
+                Eyebrow("পরবর্তী পরিশোধ")
                 Text(
                     next.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = extras.onHero,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )
             }
-            Spacer(Modifier.width(Space.md))
+            Spacer(Modifier.width(Space.sm))
             Column(horizontalAlignment = Alignment.End) {
-                MoneyText(
-                    next.amount,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = extras.onHero,
-                )
+                MoneyText(next.amount, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    when_,
+                    whenText,
                     style = MaterialTheme.typography.labelSmall,
-                    color = extras.onHeroMuted,
+                    color = if (urgent) extras.warning else extras.faint,
                 )
             }
-            Spacer(Modifier.width(Space.sm))
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "বিস্তারিত",
-                tint = extras.onHeroMuted,
-                modifier = Modifier.size(IconSize.sm),
-            )
         }
     }
 }

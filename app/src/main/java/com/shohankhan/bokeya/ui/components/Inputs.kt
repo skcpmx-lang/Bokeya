@@ -48,7 +48,7 @@ import com.shohankhan.bokeya.core.BanglaDate
 import com.shohankhan.bokeya.core.BanglaNumbers
 import com.shohankhan.bokeya.core.CurrencyFormatter
 import com.shohankhan.bokeya.core.Money
-import com.shohankhan.bokeya.ui.theme.BokeyaShapes
+import com.shohankhan.bokeya.ui.theme.Radius
 import com.shohankhan.bokeya.ui.theme.bokeya
 import java.time.Instant
 import java.time.LocalDate
@@ -109,10 +109,10 @@ fun MoneyInput(
             singleLine = true,
             isError = isError,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            shape = RoundedCornerShape(BokeyaShapes.field),
+            shape = RoundedCornerShape(Radius.md),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = MaterialTheme.bokeya.surface2,
+                unfocusedContainerColor = MaterialTheme.bokeya.surface1,
             ),
         )
         val parsed = Money.parseOrNull(value)
@@ -155,10 +155,10 @@ fun BokeyaTextField(
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = RoundedCornerShape(BokeyaShapes.field),
+        shape = RoundedCornerShape(Radius.md),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            focusedContainerColor = MaterialTheme.bokeya.surface2,
+            unfocusedContainerColor = MaterialTheme.bokeya.surface1,
         ),
     )
 }
@@ -176,8 +176,8 @@ fun DateSelector(
         modifier = modifier
             .fillMaxWidth()
             .clickable { showPicker = true },
-        shape = RoundedCornerShape(BokeyaShapes.field),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        shape = RoundedCornerShape(Radius.md),
+        color = MaterialTheme.bokeya.surface2,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Row(
@@ -264,8 +264,8 @@ fun ChipSelector(
 @Composable
 private fun SelectableChip(option: SelectorOption, selected: Boolean, onSelect: (String) -> Unit) {
     Surface(
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(BokeyaShapes.chip),
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.bokeya.surface2,
+        shape = RoundedCornerShape(Radius.pill),
         modifier = Modifier.clickable { onSelect(option.id) },
     ) {
         Text(
@@ -287,8 +287,8 @@ fun SegmentedToggle(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(BokeyaShapes.button),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(Radius.sm),
+        color = MaterialTheme.bokeya.surface2,
     ) {
         Row(Modifier.padding(4.dp)) {
             options.forEachIndexed { index, label ->
@@ -300,7 +300,7 @@ fun SegmentedToggle(
                         .padding(2.dp)
                         .background(
                             if (selected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
-                            RoundedCornerShape(BokeyaShapes.chip),
+                            RoundedCornerShape(Radius.pill),
                         )
                         .clickable { onSelect(index) },
                     contentAlignment = Alignment.Center,
