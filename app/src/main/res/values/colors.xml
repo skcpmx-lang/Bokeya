@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bokeya_background">#F6F7F9</color>
+    <color name="bokeya_splash">#17394C</color>
+    <color name="bokeya_primary">#1F4B63</color>
+    <color name="ic_launcher_background">#17394C</color>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">বকেয়া</string>
+    <string name="app_name_en">Bokeya</string>
+    <string name="app_tagline">ধার, বকেয়া, কিস্তি ও আয়-ব্যয়ের সহজ হিসাব।</string>
+    <string name="developer_name">Shohan Khan</string>
+    <string name="developer_email">helloiamshohan@gmail.com</string>
+
+    <string name="widget_total_due">মোট বকেয়া</string>
+    <string name="widget_today">আজকের হিসাব</string>
+    <string name="widget_next_payment">পরবর্তী payment</string>
+    <string name="widget_monthly">মাসিক সারাংশ</string>
+
+    <string name="shortcut_debt_short">নতুন বাকি</string>
+    <string name="shortcut_debt_long">নতুন বাকি যোগ করুন</string>
+    <string name="shortcut_expense_short">নতুন খরচ</string>
+    <string name="shortcut_expense_long">নতুন খরচ যোগ করুন</string>
+    <string name="shortcut_income_short">নতুন আয়</string>
+    <string name="shortcut_income_long">নতুন আয় যোগ করুন</string>
+    <string name="shortcut_pay_short">পরিশোধ</string>
+    <string name="shortcut_pay_long">টাকা পরিশোধ করুন</string>
+</resources>

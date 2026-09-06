@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="add_debt"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_debt"
+        android:shortcutShortLabel="@string/shortcut_debt_short"
+        android:shortcutLongLabel="@string/shortcut_debt_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="bokeya://add/debt"
+            android:targetPackage="com.shohankhan.bokeya"
+            android:targetClass="com.shohankhan.bokeya.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="add_expense"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_expense"
+        android:shortcutShortLabel="@string/shortcut_expense_short"
+        android:shortcutLongLabel="@string/shortcut_expense_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="bokeya://add/expense"
+            android:targetPackage="com.shohankhan.bokeya"
+            android:targetClass="com.shohankhan.bokeya.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="add_income"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_income"
+        android:shortcutShortLabel="@string/shortcut_income_short"
+        android:shortcutLongLabel="@string/shortcut_income_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="bokeya://add/income"
+            android:targetPackage="com.shohankhan.bokeya"
+            android:targetClass="com.shohankhan.bokeya.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="pay"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_pay"
+        android:shortcutShortLabel="@string/shortcut_pay_short"
+        android:shortcutLongLabel="@string/shortcut_pay_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="bokeya://accounts"
+            android:targetPackage="com.shohankhan.bokeya"
+            android:targetClass="com.shohankhan.bokeya.MainActivity" />
+    </shortcut>
+</shortcuts>
