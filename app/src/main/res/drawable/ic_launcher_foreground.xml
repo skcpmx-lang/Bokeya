@@ -1,42 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bokeya brand mark — Bengali "ব".
+
+  Concept: one settled ledger entry.
+    * The matra (top rule) and stem are the record itself — a ruled ledger line.
+    * The bowl is a single continuous flow drawn in two tones: it leaves the stem in white
+      (আমি দেব — what goes out), turns at the far edge, and returns in accent
+      (আমি পাব — what comes back), closing into the stem where the entry settles.
+  One stroke out, one stroke back, closed = balance. Legible down to launcher size.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!--
-      Bokeya brand mark.
-
-      Concept: the Bengali letter ব drawn as a single ledger entry. The matra and stem are the
-      record; the bowl is split into two strokes - the upper one leaving the stem (আমি দেব) and
-      the lower one curling back into it (আমি পাব) - so the letterform itself describes money
-      going out and coming back. The dot where they almost meet is the balance point.
-    -->
+    <group
+        android:scaleX="0.62"
+        android:scaleY="0.62"
+        android:pivotX="54"
+        android:pivotY="54">
     <path
-        android:pathData="M28,26 L80,26"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="8.0"
-        android:strokeLineCap="round" />
-    <path
-        android:pathData="M33,26 L33,84"
+        android:pathData="M16,25 L92,25"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="9.0"
         android:strokeLineCap="round" />
     <path
-        android:pathData="M33,26 C58,26 72,31 76,43"
+        android:pathData="M34,25 L34,88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34,42 C62,40 78,50 78,62"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="9.0"
         android:strokeLineCap="round" />
     <path
-        android:pathData="M76,43 C79,57 72,70 52,74"
+        android:pathData="M78,62 C78,77 63,87 45,84"
         android:strokeColor="#8FE0CB"
         android:strokeWidth="9.0"
         android:strokeLineCap="round" />
     <path
-        android:pathData="M52,74 C45,75.5 39,74 33,70"
+        android:pathData="M45,84 C40,83 36,80 34,76"
         android:strokeColor="#8FE0CB"
         android:strokeWidth="9.0"
         android:strokeLineCap="round" />
-    <path
-        android:pathData="M77.5,50 m-4.3,0 a4.3,4.3 0 1,0 8.6,0 a4.3,4.3 0 1,0 -8.6,0"
-        android:fillColor="#8FE0CB" />
+    </group>
 </vector>
