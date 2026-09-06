@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.item
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -198,7 +198,7 @@ fun SettingsScreen(
                             ) {
                                 if (selected) {
                                     Icon(
-                                        androidx.compose.material.icons.Icons.Filled.Check,
+                                        Icons.Filled.Check,
                                         null,
                                         tint = Color.White,
                                         modifier = Modifier.size(18.dp),

@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -224,6 +225,7 @@ fun DateSelector(
 
 data class SelectorOption(val id: String, val label: String)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChipSelector(
     options: List<SelectorOption>,

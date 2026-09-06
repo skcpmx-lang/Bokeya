@@ -20,6 +20,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,9 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shohankhan.bokeya.core.Clocks
 import com.shohankhan.bokeya.core.CurrencyFormatter
 import com.shohankhan.bokeya.core.Frequency
-import com.shohankhan.bokeya.core.Clocks
 import com.shohankhan.bokeya.core.Money
 import com.shohankhan.bokeya.core.ScheduleEngine
 import com.shohankhan.bokeya.data.db.ShopItemEntity
@@ -629,9 +631,7 @@ fun AddIncomeScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val categories by androidx.lifecycle.compose.collectAsStateWithLifecycle(
-        viewModel.incomeCategories,
-    )
+    val categories by viewModel.incomeCategories.collectAsStateWithLifecycle()
     var amount by rememberSaveable { mutableStateOf("") }
     var source by rememberSaveable { mutableStateOf("") }
     var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -677,9 +677,7 @@ fun AddExpenseScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val categories by androidx.lifecycle.compose.collectAsStateWithLifecycle(
-        viewModel.expenseCategories,
-    )
+    val categories by viewModel.expenseCategories.collectAsStateWithLifecycle()
     var amount by rememberSaveable { mutableStateOf("") }
     var where by rememberSaveable { mutableStateOf("") }
     var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
