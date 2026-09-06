@@ -27,19 +27,53 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug assembleRelease 2>&1 | tee /tmp/build.log
+      - name: Verify APKs
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          echo "build-tools: $BT" > /tmp/verify.txt
+          for apk in $(find app/build/outputs -name '*.apk'); do
+            echo "=== $apk ($(stat -c%s "$apk") bytes)" >> /tmp/verify.txt
+            $BT/aapt2 dump badging "$apk" 2>/dev/null | grep -E "^package|^application-label|^sdkVersion|^targetSdkVersion|^launchable-activity" >> /tmp/verify.txt
+            unzip -l "$apk" | grep -cE "classes.*\.dex" | sed 's/^/dex files: /' >> /tmp/verify.txt
+            $BT/apksigner verify --print-certs "$apk" >> /tmp/verify.txt 2>&1 || echo "UNSIGNED (no keystore configured)" >> /tmp/verify.txt
+          done
+          cat /tmp/verify.txt
+      - name: Test summary
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 - <<'PY' > /tmp/tests.txt
+          import glob, xml.etree.ElementTree as ET
+          t=f=s=0
+          for p in glob.glob('app/build/test-results/**/*.xml', recursive=True):
+              r=ET.parse(p).getroot()
+              t+=int(r.get('tests',0)); f+=int(r.get('failures',0))+int(r.get('errors',0)); s+=int(r.get('skipped',0))
+              for tc in r.iter('testcase'):
+                  for bad in list(tc.iter('failure'))+list(tc.iter('error')):
+                      print('FAILED:', tc.get('classname'), tc.get('name'))
+                      print((bad.text or '')[:600])
+          print(f'TOTAL tests={t} failures={f} skipped={s}')
+          PY
+          cat /tmp/tests.txt
       - name: Collect result
         if: always()
         run: |
           {
             echo "### exit: ${{ steps.build.outcome }}"
-            echo "APKs:"
-            find app/build/outputs -name '*.apk' -exec ls -la {} \; 2>/dev/null || echo none
+            echo "--- tests ---"
+            cat /tmp/tests.txt 2>/dev/null | tail -60
+            echo ""
+            echo "--- apk verify ---"
+            cat /tmp/verify.txt 2>/dev/null
             echo ""
             echo "--- errors ---"
-            grep -nE "^e: |error:|FAILURE|Caused by|> Task .* FAILED|Execution failed|Unresolved reference|Could not|\.kt:[0-9]+" /tmp/build.log | head -120
+            grep -nE "^e: |error:|FAILURE|Caused by|> Task .* FAILED|Execution failed|Unresolved reference" /tmp/build.log | head -80
             echo ""
             echo "--- tail ---"
-            tail -60 /tmp/build.log
+            tail -30 /tmp/build.log
           } > /tmp/report.txt
           head -c 60000 /tmp/report.txt > /tmp/report_trim.txt
       - name: Report to issue
@@ -55,6 +89,23 @@ jobs:
           name: bokeya-apks
           path: app/build/outputs/**/*.apk
           if-no-files-found: warn
+      - name: Publish release with APKs
+        if: steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/rel
+          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rel/bokeya-1.0.0-debug.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk /tmp/rel/bokeya-1.0.0-release-unsigned.apk 2>/dev/null || true
+          gh release delete v1.0.0 --repo ${{ github.repository }} --yes --cleanup-tag 2>/dev/null || true
+          gh release create v1.0.0 /tmp/rel/*.apk \
+            --repo ${{ github.repository }} \
+            --target ${{ github.sha }} \
+            --title "Bokeya 1.0.0" \
+            --notes "Bokeya (বকেয়া) 1.0.0 — offline debt, EMI and cashflow tracker.
+
+          - \`bokeya-1.0.0-debug.apk\` — installable debug build (applicationId \`com.shohankhan.bokeya.debug\`), signed with the Android debug key.
+          - \`bokeya-1.0.0-release-unsigned.apk\` — minified release build, **unsigned**. Sign with your own keystore (\`apksigner sign\`) before distribution."
       - name: Fail if build failed
         if: steps.build.outcome != 'success'
         run: exit 1
