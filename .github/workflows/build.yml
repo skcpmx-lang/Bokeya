@@ -60,20 +60,16 @@ jobs:
             grep -q "$c" /tmp/mani.txt || { echo "GATE FAIL: $c missing from APK manifest" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; }
           done
           echo "manifest components: all present" >> /tmp/verify.txt
-          # Classes that must survive shrinking (workers, widgets, room, backup).
-          python3 -c "
-import sys, zipfile
-z = zipfile.ZipFile('/tmp/out/Bokeya.apk')
-dex = [n for n in z.namelist() if n.endswith('.dex')]
-blob = b''.join(z.read(n) for n in dex)
-need = ['DailyDigestWorker','ReminderWorker','BokeyaDatabase','BackupPayload','TotalDueWidgetReceiver','MainActivity']
-missing = [n for n in need if n.encode() not in blob]
-print('dex files:', len(dex))
-if missing:
-    print('GATE FAIL: stripped from dex:', missing); sys.exit(1)
-print('reflective classes retained:', ', '.join(need))
-" >> /tmp/verify.txt 2>&1
-          [ $? -eq 0 ] || { cat /tmp/verify.txt; exit 1; }
+          # Functional survival audit: R8 must not strip reflectively-reached classes.
+          for cls in DailyDigestWorker ReminderWorker BokeyaDatabase BackupPayload \
+                     TotalDueWidgetReceiver MainActivity; do
+            if unzip -p "$APK" 'classes*.dex' | grep -qa "$cls"; then
+              echo "  retained: $cls" >> /tmp/verify.txt
+            else
+              echo "GATE FAIL: $cls stripped from dex" >> /tmp/verify.txt
+              cat /tmp/verify.txt; exit 1
+            fi
+          done
           echo "resource table + assets:" >> /tmp/verify.txt
           unzip -l "$APK" | grep -cE "^.*res/" | sed 's/^/  res entries: /' >> /tmp/verify.txt
           echo "ALL GATES PASSED" >> /tmp/verify.txt
