@@ -207,7 +207,10 @@ fun OverdueScreen(
                 verticalArrangement = Arrangement.spacedBy(Space.md),
             ) {
                 item("total") {
-                    BokeyaToneCard(tone = MaterialTheme.bokeya.danger) {
+                    BokeyaToneCard(
+                        tone = MaterialTheme.bokeya.danger,
+                        container = MaterialTheme.bokeya.dangerContainer,
+                    ) {
                         Eyebrow("মোট বাকি পড়ে আছে", color = MaterialTheme.bokeya.danger)
                         Spacer(Modifier.height(Space.xs))
                         MoneyText(
