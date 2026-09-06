@@ -1,0 +1,7 @@
+name: probe
+on: [push, workflow_dispatch]
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: java -version; echo "ANDROID_HOME=$ANDROID_HOME"; ls $ANDROID_HOME/platforms 2>/dev/null; curl -sI -o /dev/null -w "%{http_code}\n" https://dl.google.com/dl/android/maven2/
