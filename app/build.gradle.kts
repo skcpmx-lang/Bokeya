@@ -49,6 +49,22 @@ android {
                 null
             }
         }
+        // The single shipped artifact: real applicationId, minified like release, and always
+        // signed so it installs directly. Uses the developer keystore when the environment
+        // provides one, otherwise the standard Android debug key.
+        create("dist") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
+            val storePath = System.getenv("BOKEYA_KEYSTORE_PATH")
+            signingConfig = if (!storePath.isNullOrBlank() && file(storePath).exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
     }
 
     compileOptions {

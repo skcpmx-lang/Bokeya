@@ -26,20 +26,33 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug assembleRelease 2>&1 | tee /tmp/build.log
-      - name: Verify APKs
+          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDist 2>&1 | tee /tmp/build.log
+      - name: Stage and verify Bokeya.apk
+        id: verify
         if: always()
         continue-on-error: true
         run: |
           set +e
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          SRC=$(find app/build/outputs/apk/dist -name '*.apk' | head -1)
           echo "build-tools: $BT" > /tmp/verify.txt
-          for apk in $(find app/build/outputs -name '*.apk'); do
-            echo "=== $apk ($(stat -c%s "$apk") bytes)" >> /tmp/verify.txt
-            $BT/aapt2 dump badging "$apk" 2>/dev/null | grep -E "^package|^application-label|^sdkVersion|^targetSdkVersion|^launchable-activity" >> /tmp/verify.txt
-            unzip -l "$apk" | grep -cE "classes.*\.dex" | sed 's/^/dex files: /' >> /tmp/verify.txt
-            $BT/apksigner verify --print-certs "$apk" >> /tmp/verify.txt 2>&1 || echo "UNSIGNED (no keystore configured)" >> /tmp/verify.txt
-          done
+          if [ -z "$SRC" ]; then echo "NO APK PRODUCED" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; fi
+          mkdir -p /tmp/out && cp "$SRC" /tmp/out/Bokeya.apk
+          APK=/tmp/out/Bokeya.apk
+          echo "=== Bokeya.apk ($(stat -c%s $APK) bytes)" >> /tmp/verify.txt
+          $BT/aapt2 dump badging "$APK" > /tmp/badging.txt 2>/dev/null
+          grep -E "^package|^application-label|^sdkVersion|^targetSdkVersion|^launchable-activity" /tmp/badging.txt >> /tmp/verify.txt
+          unzip -l "$APK" | grep -cE "classes.*\.dex" | sed 's/^/dex files: /' >> /tmp/verify.txt
+          unzip -l "$APK" | grep -c "resources.arsc" | sed 's/^/resources.arsc: /' >> /tmp/verify.txt
+          $BT/apksigner verify --print-certs "$APK" >> /tmp/verify.txt 2>&1
+          SIGNED=$?
+          echo "apksigner exit: $SIGNED" >> /tmp/verify.txt
+          # Hard gates: right package, launchable, signed.
+          grep -q "name='com.shohankhan.bokeya'" /tmp/badging.txt || { echo "GATE FAIL: package name" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; }
+          grep -q "launchable-activity" /tmp/badging.txt || { echo "GATE FAIL: no launcher activity" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; }
+          grep -q "INTERNET" /tmp/badging.txt && { echo "GATE FAIL: INTERNET permission present" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; }
+          [ $SIGNED -eq 0 ] || { echo "GATE FAIL: not signed" >> /tmp/verify.txt; cat /tmp/verify.txt; exit 1; }
+          echo "ALL GATES PASSED" >> /tmp/verify.txt
           cat /tmp/verify.txt
       - name: Test summary
         if: always()
@@ -86,26 +99,23 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: bokeya-apks
-          path: app/build/outputs/**/*.apk
+          name: Bokeya
+          path: /tmp/out/Bokeya.apk
           if-no-files-found: warn
-      - name: Publish release with APKs
-        if: steps.build.outcome == 'success'
+      - name: Publish release
+        if: steps.build.outcome == 'success' && steps.verify.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/rel
-          cp app/build/outputs/apk/debug/app-debug.apk /tmp/rel/bokeya-1.0.0-debug.apk
-          cp app/build/outputs/apk/release/app-release-unsigned.apk /tmp/rel/bokeya-1.0.0-release-unsigned.apk 2>/dev/null || true
           gh release delete v1.0.0 --repo ${{ github.repository }} --yes --cleanup-tag 2>/dev/null || true
-          gh release create v1.0.0 /tmp/rel/*.apk \
+          sleep 3
+          gh release create v1.0.0 /tmp/out/Bokeya.apk \
             --repo ${{ github.repository }} \
             --target ${{ github.sha }} \
             --title "Bokeya 1.0.0" \
-            --notes "Bokeya (বকেয়া) 1.0.0 — offline debt, EMI and cashflow tracker.
+            --notes "বকেয়া (Bokeya) 1.0.0 — ধার, বকেয়া, কিস্তি ও আয়-ব্যয়ের হিসাব। সম্পূর্ণ offline।
 
-          - \`bokeya-1.0.0-debug.apk\` — installable debug build (applicationId \`com.shohankhan.bokeya.debug\`), signed with the Android debug key.
-          - \`bokeya-1.0.0-release-unsigned.apk\` — minified release build, **unsigned**. Sign with your own keystore (\`apksigner sign\`) before distribution."
-      - name: Fail if build failed
-        if: steps.build.outcome != 'success'
+          Download **Bokeya.apk** and install it directly. Package \`com.shohankhan.bokeya\`, minSdk 24."
+      - name: Fail if build or verification failed
+        if: steps.build.outcome != 'success' || steps.verify.outcome != 'success'
         run: exit 1
