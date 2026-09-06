@@ -28,11 +28,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shohankhan.bokeya.core.BanglaNumbers
 import com.shohankhan.bokeya.ui.PlannerBucket
 import com.shohankhan.bokeya.ui.PlannerViewModel
-import com.shohankhan.bokeya.ui.components.BokeyaCard
 import com.shohankhan.bokeya.ui.components.EmptyState
 import com.shohankhan.bokeya.ui.components.MoneyText
-import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.theme.bokeya
+import com.shohankhan.bokeya.ui.theme.Space
+import com.shohankhan.bokeya.ui.components.RowDivider
+import com.shohankhan.bokeya.ui.components.Eyebrow
+import com.shohankhan.bokeya.ui.components.BokeyaToneCard
+import com.shohankhan.bokeya.ui.components.BokeyaSection
+import com.shohankhan.bokeya.ui.components.BokeyaGroup
+import com.shohankhan.bokeya.core.BanglaDate
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 
 @Composable
 fun PlannerScreen(
@@ -60,38 +69,58 @@ fun PlannerScreen(
 
         LazyColumn(
             Modifier.padding(padding),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 40.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(Space.gutter, Space.sm, Space.gutter, Space.xxxl),
+            verticalArrangement = Arrangement.spacedBy(Space.xl),
         ) {
             if (state.suggested.isNotEmpty()) {
-                item("suggest_h") { SectionHeader("আগে এগুলো দেখুন") }
                 item("suggest") {
-                    BokeyaCard {
-                        Text(
-                            "তারিখ আর পরিমাণ দেখে সাজানো হয়েছে। সিদ্ধান্ত আপনার।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.bokeya.muted,
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        state.suggested.forEachIndexed { index, payment ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    BanglaNumbers.toBanglaDigits((index + 1).toString()) + ".",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text(
-                                    payment.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                MoneyText(payment.amount, style = MaterialTheme.typography.bodyLarge)
+                    BokeyaSection(
+                        title = "আগে এগুলো দেখুন",
+                        subtitle = "তারিখ আর পরিমাণ দেখে সাজানো — সিদ্ধান্ত আপনার",
+                    ) {
+                        BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs)) {
+                            state.suggested.forEachIndexed { index, payment ->
+                                if (index > 0) RowDivider(inset = 56.dp)
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = Space.md, vertical = Space.md),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            BanglaNumbers.toBanglaDigits((index + 1).toString()),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                    Spacer(Modifier.width(Space.md))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            payment.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                        )
+                                        Text(
+                                            payment.type.label + " · " +
+                                                BanglaDate.relative(payment.dueDate),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.bokeya.faint,
+                                        )
+                                    }
+                                    MoneyText(
+                                        payment.amount,
+                                        style = MaterialTheme.typography.titleSmall,
+                                    )
+                                }
                             }
                         }
                     }
@@ -113,29 +142,43 @@ private fun androidx.compose.foundation.lazy.LazyListScope.bucketSection(
     danger: Boolean = false,
 ) {
     if (bucket.payments.isEmpty()) return
-    item("h_${bucket.label}") {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp, start = 4.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                bucket.label,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (danger) MaterialTheme.bokeya.danger else MaterialTheme.colorScheme.onSurface,
-            )
-            MoneyText(
-                bucket.total,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (danger) MaterialTheme.bokeya.danger else MaterialTheme.colorScheme.primary,
-            )
+    item("b_${bucket.label}") {
+        val accent = if (danger) MaterialTheme.bokeya.danger else MaterialTheme.colorScheme.primary
+        Column {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = Space.xs, bottom = Space.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(accent),
+                    )
+                    Spacer(Modifier.width(Space.sm))
+                    Text(
+                        bucket.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                MoneyText(
+                    bucket.total,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = accent,
+                )
+            }
+            BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs)) {
+                bucket.payments.forEachIndexed { index, payment ->
+                    if (index > 0) RowDivider(inset = 68.dp)
+                    UpcomingRow(payment) { onPay(payment.accountId) }
+                }
+            }
         }
-    }
-    items(bucket.payments, key = { "${bucket.label}_${it.accountId}_${it.installmentId ?: 0}" }) { payment ->
-        UpcomingRow(payment) { onPay(payment.accountId) }
     }
 }
 
@@ -160,21 +203,25 @@ fun OverdueScreen(
         } else {
             LazyColumn(
                 Modifier.padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(Space.gutter),
+                verticalArrangement = Arrangement.spacedBy(Space.md),
             ) {
                 item("total") {
-                    BokeyaCard {
-                        Text(
-                            "মোট বাকি পড়ে আছে",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.bokeya.muted,
-                        )
-                        Spacer(Modifier.height(4.dp))
+                    BokeyaToneCard(tone = MaterialTheme.bokeya.danger) {
+                        Eyebrow("মোট বাকি পড়ে আছে", color = MaterialTheme.bokeya.danger)
+                        Spacer(Modifier.height(Space.xs))
                         MoneyText(
                             state.overdue.total,
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.bokeya.danger,
+                        )
+                        Spacer(Modifier.height(Space.xs))
+                        Text(
+                            BanglaNumbers.toBanglaDigits(
+                                state.overdue.payments.size.toString(),
+                            ) + "টি পরিশোধের তারিখ পেরিয়ে গেছে",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.bokeya.muted,
                         )
                     }
                 }
