@@ -96,74 +96,95 @@ import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.components.SelectorOption
 import com.shohankhan.bokeya.ui.theme.bokeya
 import java.time.LocalDate
+import com.shohankhan.bokeya.ui.theme.Space
+import com.shohankhan.bokeya.ui.theme.IconSize
+import com.shohankhan.bokeya.ui.components.SecondaryButton
+import com.shohankhan.bokeya.ui.components.RowDivider
+import com.shohankhan.bokeya.ui.components.IconBadge
+import com.shohankhan.bokeya.ui.components.Eyebrow
+import com.shohankhan.bokeya.ui.components.BokeyaRow
+import com.shohankhan.bokeya.ui.components.BokeyaGroup
+import com.shohankhan.bokeya.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 
 // ---------------------------------------------------------------- More
 
 @Composable
 fun MoreScreen(onNavigate: (String) -> Unit, contentPadding: PaddingValues) {
     data class Entry(val icon: ImageVector, val title: String, val subtitle: String, val route: String)
+    data class Group(val label: String, val entries: List<Entry>)
 
-    val entries = listOf(
-        Entry(Icons.Filled.Assessment, "Reports", "আয়-ব্যয় ও বকেয়ার বিস্তারিত report", Route.Reports.path),
-        Entry(Icons.Filled.Timeline, "Payment Planner", "কবে কত দিতে হবে", Route.Planner.path),
-        Entry(Icons.Filled.Savings, "লক্ষ্য ও সঞ্চয়", "Goal তৈরি করুন", Route.Goals.path),
-        Entry(Icons.Filled.Repeat, "Recurring", "নিয়মিত আয়-ব্যয় ও কিস্তি", Route.Recurring.path),
-        Entry(Icons.Filled.Category, "Categories", "নিজের category যোগ করুন", Route.Categories.path),
-        Entry(Icons.Filled.Archive, "Archive", "পুরনো হিসাব", Route.Archive.path),
-        Entry(Icons.Filled.Backup, "Backup ও Export", "PDF, CSV, backup, restore", Route.Backup.path),
-        Entry(Icons.Filled.Settings, "Settings", "Theme, notification, security", Route.Settings.path),
-        Entry(Icons.Filled.Info, "About", "Bokeya সম্পর্কে", Route.About.path),
+    // Grouped by intent rather than dumped as one long identical list.
+    val groups = listOf(
+        Group(
+            "বিশ্লেষণ",
+            listOf(
+                Entry(Icons.Filled.Assessment, "Reports", "আয়-ব্যয় ও বকেয়ার বিস্তারিত", Route.Reports.path),
+                Entry(Icons.Filled.Timeline, "Payment Planner", "কবে কত দিতে হবে", Route.Planner.path),
+            ),
+        ),
+        Group(
+            "পরিকল্পনা",
+            listOf(
+                Entry(Icons.Filled.Savings, "লক্ষ্য ও সঞ্চয়", "Goal তৈরি করুন", Route.Goals.path),
+                Entry(Icons.Filled.Repeat, "Recurring", "নিয়মিত আয়-ব্যয় ও কিস্তি", Route.Recurring.path),
+                Entry(Icons.Filled.Category, "Categories", "নিজের category যোগ করুন", Route.Categories.path),
+            ),
+        ),
+        Group(
+            "তথ্য ও সেটিংস",
+            listOf(
+                Entry(Icons.Filled.Archive, "Archive", "পুরনো হিসাব", Route.Archive.path),
+                Entry(Icons.Filled.Backup, "Backup ও Export", "PDF, CSV, backup, restore", Route.Backup.path),
+                Entry(Icons.Filled.Settings, "Settings", "Theme, notification, security", Route.Settings.path),
+                Entry(Icons.Filled.Info, "About", "Bokeya সম্পর্কে", Route.About.path),
+            ),
+        ),
     )
 
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            16.dp,
-            16.dp,
-            16.dp,
+            Space.gutter,
+            Space.lg,
+            Space.gutter,
             contentPadding.calculateBottomPadding() + 100.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(Space.lg),
     ) {
         item("title") {
             Text(
                 "আরও",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 6.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = Space.xs),
             )
         }
-        items(entries, key = { it.route }) { entry ->
-            BokeyaCard(onClick = { onNavigate(entry.route) }, contentPadding = 15.dp) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(13.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            entry.icon,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(19.dp),
-                        )
+        groups.forEach { group ->
+            item(group.label) {
+                Column {
+                    Eyebrow(group.label, Modifier.padding(start = Space.xs, bottom = Space.sm))
+                    BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs)) {
+                        group.entries.forEachIndexed { index, entry ->
+                            if (index > 0) RowDivider(inset = 64.dp)
+                            BokeyaRow(
+                                onClick = { onNavigate(entry.route) },
+                                leading = {
+                                    IconBadge(entry.icon, MaterialTheme.colorScheme.primary, size = 38.dp)
+                                },
+                                title = entry.title,
+                                subtitle = entry.subtitle,
+                                trailing = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        null,
+                                        tint = MaterialTheme.bokeya.faint,
+                                        modifier = Modifier.size(IconSize.md),
+                                    )
+                                },
+                            )
+                        }
                     }
-                    Spacer(Modifier.width(13.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            entry.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.bokeya.muted,
-                        )
-                    }
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        null,
-                        tint = MaterialTheme.bokeya.muted,
-                    )
                 }
             }
         }
@@ -660,83 +681,76 @@ fun AboutScreen(onBack: () -> Unit) {
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = Space.gutter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(10.dp))
-            Box(
-                Modifier
-                    .size(78.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(MaterialTheme.bokeya.heroStart),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    "ব",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Text("বকেয়া", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Bokeya", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.bokeya.muted)
+            Spacer(Modifier.height(Space.xl))
+            Image(
+                painter = painterResource(R.drawable.ic_brand_mark),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(84.dp)
+                    .clip(RoundedCornerShape(26.dp)),
+            )
+            Spacer(Modifier.height(Space.md))
+            Text("বকেয়া", style = MaterialTheme.typography.headlineMedium)
             Text(
-                "ধার, বকেয়া, কিস্তি ও আয়-ব্যয়ের সহজ হিসাব।",
+                "ধার, বকেয়া, কিস্তি ও আয়-ব্যয়ের সহজ হিসাব",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.bokeya.muted,
                 textAlign = TextAlign.Center,
             )
+            Spacer(Modifier.height(Space.xl))
 
-            BokeyaCard {
+            BokeyaGroup(contentPadding = PaddingValues(horizontal = Space.lg, vertical = Space.sm)) {
                 InfoRow("Developer", "Shohan Khan")
                 InfoRow("Version", BuildConfig.VERSION_NAME)
                 InfoRow("Package", BuildConfig.APPLICATION_ID)
-                Spacer(Modifier.height(8.dp))
-                PrimaryButton(
-                    text = "helloiamshohan@gmail.com",
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:helloiamshohan@gmail.com")
-                            putExtra(Intent.EXTRA_SUBJECT, "Bokeya feedback")
-                        }
-                        runCatching { context.startActivity(intent) }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
+            Spacer(Modifier.height(Space.md))
+            SecondaryButton(
+                text = "helloiamshohan@gmail.com",
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:helloiamshohan@gmail.com")
+                        putExtra(Intent.EXTRA_SUBJECT, "Bokeya feedback")
+                    }
+                    runCatching { context.startActivity(intent) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-            BokeyaCard {
-                Text("Privacy", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Bokeya আপনার আর্থিক তথ্য কোনো server-এ পাঠায় না। সব তথ্য শুধু আপনার ফোনেই থাকে। " +
-                        "কোনো বিজ্ঞাপন নেই, কোনো tracking নেই, কোনো internet permission নেই।",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            BokeyaCard {
-                Text("Open source", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "এই app তৈরিতে ব্যবহৃত হয়েছে AndroidX, Jetpack Compose, Room, WorkManager এবং " +
-                        "Kotlin — সবগুলোই Apache License 2.0-এর অধীনে।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.bokeya.muted,
-                )
-            }
-
-            BokeyaCard {
-                Text(
-                    "Bokeya কোনো পেশাদার আর্থিক পরামর্শ, credit score বা loan approval দেয় না। " +
-                        "এটি শুধু আপনার নিজের হিসাব গুছিয়ে রাখার একটি টুল।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.bokeya.muted,
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Space.xxl))
+            AboutNote(
+                "Privacy",
+                "Bokeya আপনার আর্থিক তথ্য কোনো server-এ পাঠায় না। সব তথ্য শুধু আপনার ফোনেই থাকে। " +
+                    "কোনো বিজ্ঞাপন নেই, কোনো tracking নেই, কোনো internet permission নেই।",
+            )
+            AboutNote(
+                "Open source",
+                "এই app তৈরিতে ব্যবহৃত হয়েছে AndroidX, Jetpack Compose, Room, WorkManager এবং Kotlin — " +
+                    "সবগুলোই Apache License 2.0-এর অধীনে।",
+            )
+            AboutNote(
+                "মনে রাখুন",
+                "Bokeya কোনো পেশাদার আর্থিক পরামর্শ, credit score বা loan approval দেয় না। " +
+                    "এটি শুধু আপনার নিজের হিসাব গুছিয়ে রাখার একটি টুল।",
+            )
+            Spacer(Modifier.height(Space.xxxl))
         }
+    }
+}
+
+/** Flat prose block — About is reading material, not a set of controls. */
+@Composable
+private fun AboutNote(title: String, body: String) {
+    Column(Modifier.fillMaxWidth().padding(bottom = Space.xl)) {
+        Eyebrow(title)
+        Spacer(Modifier.height(Space.sm))
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.bokeya.muted,
+        )
     }
 }
