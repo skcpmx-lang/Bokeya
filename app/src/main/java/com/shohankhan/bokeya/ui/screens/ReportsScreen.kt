@@ -41,7 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shohankhan.bokeya.backup.ReportKind
 import com.shohankhan.bokeya.core.BanglaDate
 import com.shohankhan.bokeya.core.CurrencyFormatter
-import com.shohankhan.bokeya.core.Money
 import com.shohankhan.bokeya.ui.RangePreset
 import com.shohankhan.bokeya.ui.ReportsViewModel
 import com.shohankhan.bokeya.ui.SettingsViewModel
@@ -52,9 +51,15 @@ import com.shohankhan.bokeya.ui.components.DateSelector
 import com.shohankhan.bokeya.ui.components.InfoRow
 import com.shohankhan.bokeya.ui.components.MoneyText
 import com.shohankhan.bokeya.ui.components.SecondaryButton
-import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.components.SelectorOption
 import com.shohankhan.bokeya.ui.theme.bokeya
+import com.shohankhan.bokeya.core.BanglaNumbers
+import com.shohankhan.bokeya.ui.theme.Space
+import com.shohankhan.bokeya.ui.components.RankedBar
+import com.shohankhan.bokeya.ui.components.Eyebrow
+import com.shohankhan.bokeya.ui.components.ComparisonBars
+import com.shohankhan.bokeya.ui.components.BokeyaSection
+import com.shohankhan.bokeya.ui.components.BokeyaGroup
 
 @Composable
 fun ReportsScreen(
@@ -138,80 +143,96 @@ fun ReportsScreen(
             val data = report ?: return@LazyColumn
 
             item("summary") {
-                BokeyaCard {
-                    Text("সারসংক্ষেপ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(12.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatTile("আয়", data.totalIncome, MaterialTheme.bokeya.moneyIn, Modifier.weight(1f))
-                        StatTile("খরচ", data.totalExpense, MaterialTheme.bokeya.moneyOut, Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    InfoRow(
-                        "Net",
-                        CurrencyFormatter.format(data.totalIncome - data.totalExpense),
-                        valueColor = if ((data.totalIncome - data.totalExpense).isNegative) {
-                            MaterialTheme.bokeya.moneyOut
-                        } else {
-                            MaterialTheme.bokeya.moneyIn
-                        },
+                val net = data.totalIncome - data.totalExpense
+                BokeyaSection(title = "আয় ও খরচ") {
+                    ComparisonBars(
+                        leftLabel = "আয়",
+                        leftValue = data.totalIncome.poisha,
+                        leftColor = MaterialTheme.bokeya.moneyIn,
+                        leftText = CurrencyFormatter.format(data.totalIncome),
+                        rightLabel = "খরচ",
+                        rightValue = data.totalExpense.poisha,
+                        rightColor = MaterialTheme.bokeya.moneyOut,
+                        rightText = CurrencyFormatter.format(data.totalExpense),
                     )
-                    InfoRow("মোট বকেয়া", CurrencyFormatter.format(data.totalDebt))
-                    InfoRow("পরিশোধ হয়েছে", CurrencyFormatter.format(data.totalPaid))
-                    InfoRow("এখনো বাকি", CurrencyFormatter.format(data.remaining))
-                    InfoRow("আগামী ৩০ দিনে", CurrencyFormatter.format(data.upcoming))
+                    Spacer(Modifier.height(Space.md))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Text(
+                            if (net.isNegative) "ঘাটতি" else "উদ্বৃত্ত",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.bokeya.muted,
+                        )
+                        MoneyText(
+                            net,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = if (net.isNegative) {
+                                MaterialTheme.bokeya.moneyOut
+                            } else {
+                                MaterialTheme.bokeya.moneyIn
+                            },
+                        )
+                    }
                 }
             }
 
-            if (data.totalDebt.isPositive) {
-                item("progress") {
-                    BokeyaCard {
-                        Text(
-                            "পরিশোধের অগ্রগতি",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        BokeyaProgress(
-                            data.totalPaid.poisha.toFloat() / data.totalDebt.poisha.toFloat(),
-                        )
+            item("debt") {
+                BokeyaSection(title = "বকেয়ার অবস্থা") {
+                    if (data.totalDebt.isPositive) {
+                        val done = data.totalPaid.poisha.toFloat() / data.totalDebt.poisha.toFloat()
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom,
+                        ) {
+                            Column {
+                                Eyebrow("এখনো বাকি")
+                                MoneyText(data.remaining, style = MaterialTheme.typography.headlineSmall)
+                            }
+                            Text(
+                                BanglaNumbers.toBanglaDigits((done * 100).toInt().toString()) + "% শোধ",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.bokeya.muted,
+                            )
+                        }
+                        Spacer(Modifier.height(Space.sm))
+                        BokeyaProgress(done, height = 6.dp)
+                        Spacer(Modifier.height(Space.md))
+                    }
+                    BokeyaGroup(contentPadding = PaddingValues(horizontal = Space.md, vertical = Space.xs)) {
+                        InfoRow("মোট বকেয়া", CurrencyFormatter.format(data.totalDebt))
+                        InfoRow("পরিশোধ হয়েছে", CurrencyFormatter.format(data.totalPaid))
+                        InfoRow("আগামী ৩০ দিনে", CurrencyFormatter.format(data.upcoming))
                     }
                 }
             }
 
             if (data.categoryRows.isNotEmpty()) {
-                item("cat_h") { SectionHeader("Category অনুযায়ী খরচ") }
                 item("cat") {
-                    BokeyaCard {
-                        val max = data.categoryRows.maxOf { it.second.poisha }.coerceAtLeast(1L)
-                        data.categoryRows.forEach { (name, amount) ->
-                            Column(Modifier.padding(vertical = 6.dp)) {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(name, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        CurrencyFormatter.format(amount),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
-                                Spacer(Modifier.height(5.dp))
-                                BokeyaProgress(
-                                    amount.poisha.toFloat() / max.toFloat(),
-                                    height = 5.dp,
-                                    color = MaterialTheme.bokeya.moneyOut,
-                                )
-                            }
+                    val max = data.categoryRows.maxOf { it.second.poisha }.coerceAtLeast(1L)
+                    val total = data.categoryRows.sumOf { it.second.poisha }.coerceAtLeast(1L)
+                    BokeyaSection(title = "Category অনুযায়ী খরচ") {
+                        data.categoryRows.forEachIndexed { index, (name, amount) ->
+                            RankedBar(
+                                label = name,
+                                valueText = CurrencyFormatter.format(amount),
+                                fraction = amount.poisha.toFloat() / max.toFloat(),
+                                color = MaterialTheme.bokeya.series[index % MaterialTheme.bokeya.series.size],
+                                caption = BanglaNumbers.toBanglaDigits(
+                                    (amount.poisha * 100 / total).toString(),
+                                ) + "%",
+                            )
                         }
                     }
                 }
             }
 
             if (data.accountRows.isNotEmpty()) {
-                item("acc_h") { SectionHeader("হিসাবসমূহ") }
                 item("acc") {
-                    BokeyaCard {
+                    BokeyaSection(title = "হিসাবসমূহ") {
                         data.accountRows.forEach { row ->
                             Row(
                                 Modifier
@@ -254,20 +275,6 @@ fun ReportsScreen(
     }
 }
 
-@Composable
-private fun StatTile(label: String, amount: Money, color: Color, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = color.copy(alpha = 0.09f),
-        shape = RoundedCornerShape(14.dp),
-    ) {
-        Column(Modifier.padding(13.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.bokeya.muted)
-            Spacer(Modifier.height(3.dp))
-            MoneyText(amount, style = MaterialTheme.typography.titleLarge, color = color)
-        }
-    }
-}
 
 internal fun shareFile(context: android.content.Context, uri: android.net.Uri, mime: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {

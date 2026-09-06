@@ -54,9 +54,11 @@ import com.shohankhan.bokeya.ui.components.BokeyaProgress
 import com.shohankhan.bokeya.ui.components.EmptyState
 import com.shohankhan.bokeya.ui.components.FilterChipRow
 import com.shohankhan.bokeya.ui.components.MoneyText
-import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.theme.bokeya
 import java.time.LocalDate
+import com.shohankhan.bokeya.ui.theme.Radius
+import com.shohankhan.bokeya.ui.components.RankedBar
+import com.shohankhan.bokeya.ui.components.BokeyaSection
 
 @Composable
 fun CashflowScreen(
@@ -153,48 +155,34 @@ fun CashflowScreen(
         }
 
         if (state.categoryBreakdown.isNotEmpty()) {
-            item("cat_h") { SectionHeader("খরচের ভাগ") }
             item("cat") {
-                BokeyaCard {
-                    val max = state.categoryBreakdown.maxOf { it.second.poisha }.coerceAtLeast(1L)
-                    state.categoryBreakdown.take(8).forEach { (name, amount) ->
+                val max = state.categoryBreakdown.maxOf { it.second.poisha }.coerceAtLeast(1L)
+                val total = state.categoryBreakdown.sumOf { it.second.poisha }.coerceAtLeast(1L)
+                BokeyaSection(
+                    title = "খরচের ভাগ",
+                    subtitle = if (selectedCategory != null) "একটি category বেছে নেওয়া আছে" else null,
+                ) {
+                    state.categoryBreakdown.take(8).forEachIndexed { index, (name, amount) ->
                         val categoryId = state.categories.values.firstOrNull { it.name == name }?.id
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
+                        val active = selectedCategory == categoryId
+                        RankedBar(
+                            label = name,
+                            valueText = CurrencyFormatter.format(amount),
+                            fraction = amount.poisha.toFloat() / max.toFloat(),
+                            color = if (selectedCategory == null || active) {
+                                MaterialTheme.bokeya.series[index % MaterialTheme.bokeya.series.size]
+                            } else {
+                                MaterialTheme.bokeya.faint
+                            },
+                            caption = BanglaNumbers.toBanglaDigits(
+                                (amount.poisha * 100 / total).toString(),
+                            ) + "%" + if (active) " · নির্বাচিত" else "",
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Radius.sm))
                                 .clickable {
-                                    viewModel.selectCategory(
-                                        if (selectedCategory == categoryId) null else categoryId,
-                                    )
-                                }
-                                .padding(vertical = 7.dp),
-                        ) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (selectedCategory == categoryId) {
-                                        FontWeight.Bold
-                                    } else {
-                                        FontWeight.Normal
-                                    },
-                                )
-                                Text(
-                                    CurrencyFormatter.format(amount),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                            Spacer(Modifier.height(5.dp))
-                            BokeyaProgress(
-                                amount.poisha.toFloat() / max.toFloat(),
-                                height = 5.dp,
-                                color = MaterialTheme.bokeya.moneyOut,
-                            )
-                        }
+                                    viewModel.selectCategory(if (active) null else categoryId)
+                                },
+                        )
                     }
                 }
             }
