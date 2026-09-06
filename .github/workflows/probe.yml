@@ -1,7 +1,29 @@
 name: probe
 on: [push, workflow_dispatch]
+permissions:
+  contents: write
+  issues: write
 jobs:
   p:
     runs-on: ubuntu-latest
     steps:
-      - run: java -version; echo "ANDROID_HOME=$ANDROID_HOME"; ls $ANDROID_HOME/platforms 2>/dev/null; curl -sI -o /dev/null -w "%{http_code}\n" https://dl.google.com/dl/android/maven2/
+      - name: probe
+        run: |
+          {
+          echo "java: $(java -version 2>&1 | head -1)"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls $ANDROID_HOME/platforms
+          ls $ANDROID_HOME/build-tools
+          echo "gradle: $(gradle -v 2>/dev/null | grep Gradle | head -1)"
+          echo -n "google maven: "; curl -sI -o /dev/null -w "%{http_code}\n" https://dl.google.com/dl/android/maven2/androidx/core/core/1.13.1/core-1.13.1.pom
+          echo -n "central: "; curl -sI -o /dev/null -w "%{http_code}\n" https://repo1.maven.org/maven2/
+          java -version 2>&1 | head -3
+          } > /tmp/out.txt 2>&1
+          cat /tmp/out.txt
+      - name: report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '```\n%s\n```\n' "$(tail -c 60000 /tmp/out.txt)" > /tmp/body.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file /tmp/body.md
