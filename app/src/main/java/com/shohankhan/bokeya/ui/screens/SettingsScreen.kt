@@ -63,6 +63,25 @@ import com.shohankhan.bokeya.ui.components.SecondaryButton
 import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.components.SelectorOption
 import com.shohankhan.bokeya.ui.theme.bokeya
+import com.shohankhan.bokeya.ui.theme.Space
+import com.shohankhan.bokeya.ui.theme.Radius
+import com.shohankhan.bokeya.ui.theme.IconSize
+import com.shohankhan.bokeya.ui.components.TertiaryButton
+import com.shohankhan.bokeya.ui.components.RowDivider
+import com.shohankhan.bokeya.ui.components.Eyebrow
+import com.shohankhan.bokeya.ui.components.BokeyaGroup
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.foundation.layout.ColumnScope
+
+/** A labelled group of related settings: eyebrow label above a bordered row stack. */
+@Composable
+private fun SettingsBlock(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column {
+        Eyebrow(title, Modifier.padding(start = Space.xs, bottom = Space.sm))
+        BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs), content = content)
+    }
+}
 
 @Composable
 private fun SettingRow(
@@ -77,24 +96,32 @@ private fun SettingRow(
         Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = Space.md, vertical = Space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.bokeya.muted)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.bokeya.faint,
+                )
             }
         }
         when {
-            checked != null && onCheckedChange != null ->
+            checked != null && onCheckedChange != null -> {
+                Spacer(Modifier.width(Space.sm))
                 Switch(checked = checked, onCheckedChange = onCheckedChange)
-            trailing != null ->
+            }
+            trailing != null -> {
+                Spacer(Modifier.width(Space.sm))
                 Text(
                     trailing,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
+            }
         }
     }
 }
@@ -125,89 +152,102 @@ fun SettingsScreen(
     ScreenScaffold(title = "Settings", onBack = onBack, snackbarHostState = snackbarHostState) { padding ->
         LazyColumn(
             Modifier.padding(padding),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 40.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(Space.gutter, Space.sm, Space.gutter, Space.xxxl),
+            verticalArrangement = Arrangement.spacedBy(Space.lg),
         ) {
+            // Identity sits flat on the canvas — it is a header, not a setting.
             item("profile") {
-                BokeyaCard(onClick = { showNameDialog = true }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                settings.userName.take(1).ifBlank { "ব" },
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                settings.userName.ifBlank { "নাম যোগ করুন" },
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                "Bokeya " + BuildConfig.VERSION_NAME,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.bokeya.muted,
-                            )
-                        }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Radius.lg))
+                        .clickable { showNameDialog = true }
+                        .padding(vertical = Space.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            settings.userName.take(1).ifBlank { "ব" },
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
+                    Spacer(Modifier.width(Space.md))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            settings.userName.ifBlank { "নাম যোগ করুন" },
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            "Bokeya " + BuildConfig.VERSION_NAME,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.bokeya.faint,
+                        )
+                    }
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        null,
+                        tint = MaterialTheme.bokeya.faint,
+                        modifier = Modifier.size(IconSize.md),
+                    )
                 }
             }
 
-            item("appearance_h") { SectionHeader("Appearance") }
             item("appearance") {
-                BokeyaCard {
-                    ChipSelector(
-                        options = listOf(
-                            SelectorOption(ThemeMode.SYSTEM.name, "System"),
-                            SelectorOption(ThemeMode.LIGHT.name, "Light"),
-                            SelectorOption(ThemeMode.DARK.name, "Dark"),
-                        ),
-                        selectedId = settings.themeMode.name,
-                        onSelect = { viewModel.setTheme(ThemeMode.valueOf(it)) },
-                        label = "Theme",
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        "Accent",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.bokeya.muted,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        listOf(
-                            AccentColor.DEFAULT to Color(0xFF1F4B63),
-                            AccentColor.BLUE to Color(0xFF1D4ED8),
-                            AccentColor.GREEN to Color(0xFF11624A),
-                            AccentColor.PURPLE to Color(0xFF4C1D95),
-                        ).forEach { (accent, color) ->
-                            val selected = settings.accent == accent
-                            Box(
-                                Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .clickable { viewModel.setAccent(accent) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (selected) {
-                                    Icon(
-                                        Icons.Filled.Check,
-                                        null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp),
-                                    )
+                SettingsBlock("চেহারা") {
+                    Column(Modifier.padding(horizontal = Space.md, vertical = Space.sm)) {
+                        ChipSelector(
+                            options = listOf(
+                                SelectorOption(ThemeMode.SYSTEM.name, "System"),
+                                SelectorOption(ThemeMode.LIGHT.name, "Light"),
+                                SelectorOption(ThemeMode.DARK.name, "Dark"),
+                            ),
+                            selectedId = settings.themeMode.name,
+                            onSelect = { viewModel.setTheme(ThemeMode.valueOf(it)) },
+                            label = "Theme",
+                        )
+                        Spacer(Modifier.height(Space.md))
+                        Text(
+                            "Accent",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.bokeya.muted,
+                        )
+                        Spacer(Modifier.height(Space.sm))
+                        Row(horizontalArrangement = Arrangement.spacedBy(Space.md)) {
+                            listOf(
+                                AccentColor.DEFAULT to Color(0xFF1F4B63),
+                                AccentColor.BLUE to Color(0xFF1D4ED8),
+                                AccentColor.GREEN to Color(0xFF11624A),
+                                AccentColor.PURPLE to Color(0xFF4C1D95),
+                            ).forEach { (accent, color) ->
+                                val selected = settings.accent == accent
+                                Box(
+                                    Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .clickable { viewModel.setAccent(accent) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (selected) {
+                                        Icon(
+                                            Icons.Filled.Check,
+                                            null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(IconSize.sm),
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
+                    RowDivider(inset = Space.md)
                     SettingRow(
                         "বাংলা সংখ্যা",
                         "১২৩৪ নাকি 1234",
@@ -217,33 +257,33 @@ fun SettingsScreen(
                 }
             }
 
-            item("notif_h") { SectionHeader("Notifications") }
             item("notif") {
-                BokeyaCard {
+                SettingsBlock("Notification") {
                     SettingRow(
                         "Notification চালু",
                         "কিস্তি ও বকেয়ার কথা মনে করিয়ে দেবে",
                         checked = settings.notificationsEnabled,
                         onCheckedChange = { viewModel.setNotifications(it) },
                     )
+                    RowDivider(inset = Space.md)
                     SettingRow(
                         "কখন মনে করাবে",
                         "প্রতিদিনের সারাংশের সময়",
                         onClick = { showHourDialog = true },
                         trailing = BanglaNumbers.toBanglaDigits(settings.reminderHour.toString()) + ":০০",
                     )
-                    Spacer(Modifier.height(8.dp))
-                    SecondaryButton(
-                        text = "এখনই একটি notification দেখুন",
+                    RowDivider(inset = Space.md)
+                    SettingRow(
+                        "পরীক্ষা করে দেখুন",
+                        "একটি নমুনা notification পাঠাবে",
                         onClick = { viewModel.testNotification() },
-                        modifier = Modifier.fillMaxWidth(),
+                        trailing = "পাঠান",
                     )
                 }
             }
 
-            item("security_h") { SectionHeader("Security") }
             item("security") {
-                BokeyaCard {
+                SettingsBlock("Security") {
                     SettingRow(
                         "App Lock",
                         if (settings.hasPin) "PIN চালু আছে" else "PIN দিয়ে app সুরক্ষিত করুন",
@@ -253,6 +293,7 @@ fun SettingsScreen(
                         },
                     )
                     if (settings.appLockEnabled && settings.hasPin) {
+                        RowDivider(inset = Space.md)
                         SettingRow(
                             "Biometric",
                             if (BiometricHelper.isAvailable(activity)) {
@@ -263,8 +304,10 @@ fun SettingsScreen(
                             checked = settings.biometricEnabled,
                             onCheckedChange = { viewModel.setBiometric(it) },
                         )
+                        RowDivider(inset = Space.md)
                         SettingRow("PIN বদলান", onClick = { showPinDialog = true }, trailing = "বদলান")
                     }
+                    RowDivider(inset = Space.md)
                     SettingRow(
                         "Screenshot বন্ধ রাখুন",
                         "Recents-এও তথ্য লুকানো থাকবে",
@@ -274,21 +317,22 @@ fun SettingsScreen(
                 }
             }
 
-            item("behaviour_h") { SectionHeader("অন্যান্য") }
             item("behaviour") {
-                BokeyaCard {
+                SettingsBlock("অন্যান্য") {
                     SettingRow(
                         "Haptic feedback",
                         "গুরুত্বপূর্ণ কাজে হালকা কাঁপুনি",
                         checked = settings.hapticsEnabled,
                         onCheckedChange = { viewModel.setHaptics(it) },
                     )
+                    RowDivider(inset = Space.md)
                     SettingRow(
                         "পরিশোধ শেষে confetti",
                         "পুরো টাকা শোধ হলে ছোট্ট উদযাপন",
                         checked = settings.confettiEnabled,
                         onCheckedChange = { viewModel.setConfetti(it) },
                     )
+                    RowDivider(inset = Space.md)
                     SettingRow(
                         "পরিশোধ হলে archive",
                         "শেষ হওয়া হিসাব নিজে থেকে গুছিয়ে রাখবে",
@@ -298,25 +342,50 @@ fun SettingsScreen(
                 }
             }
 
-            item("data_h") { SectionHeader("Data") }
             item("data") {
-                BokeyaCard {
-                    SettingRow("Backup ও Export", onClick = { onNavigate(Route.Backup.path) }, trailing = "খুলুন")
-                    SettingRow("Categories", onClick = { onNavigate(Route.Categories.path) }, trailing = "খুলুন")
+                SettingsBlock("তথ্য") {
+                    SettingRow(
+                        "Backup ও Export",
+                        "নিজের ফাইলে হিসাব রাখুন",
+                        onClick = { onNavigate(Route.Backup.path) },
+                        trailing = "খুলুন",
+                    )
+                    RowDivider(inset = Space.md)
+                    SettingRow(
+                        "Categories",
+                        "আয় ও খরচের ধরন",
+                        onClick = { onNavigate(Route.Categories.path) },
+                        trailing = "খুলুন",
+                    )
+                    RowDivider(inset = Space.md)
                     SettingRow("Currency", trailing = "৳ BDT")
-                    Spacer(Modifier.height(8.dp))
-                    SecondaryButton(
-                        text = "সব তথ্য মুছে ফেলুন",
-                        onClick = { showWipeDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
+                    RowDivider(inset = Space.md)
+                    SettingRow(
+                        "About",
+                        "Bokeya " + BuildConfig.VERSION_NAME + " · Shohan Khan",
+                        onClick = { onNavigate(Route.About.path) },
+                        trailing = "খুলুন",
                     )
                 }
             }
 
-            item("about") {
-                BokeyaCard(onClick = { onNavigate(Route.About.path) }) {
-                    InfoRow("About", "Bokeya " + BuildConfig.VERSION_NAME)
-                    InfoRow("Developer", "Shohan Khan")
+            // Destructive action stands alone, away from routine settings.
+            item("wipe") {
+                Column {
+                    TertiaryButton(
+                        text = "সব তথ্য মুছে ফেলুন",
+                        onClick = { showWipeDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.bokeya.danger,
+                    )
+                    Spacer(Modifier.height(Space.xs))
+                    Text(
+                        "এটি ফিরিয়ে আনা যাবে না। আগে backup নিন।",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.bokeya.faint,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
