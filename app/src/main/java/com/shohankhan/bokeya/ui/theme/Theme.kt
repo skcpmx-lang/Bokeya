@@ -11,7 +11,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -120,9 +119,7 @@ data class BokeyaColors(
 
     /** Category ramp for distribution bars — ordered shop / loan / emi / personal. */
     val series: List<Color>,
-) {
-    @Deprecated("Use surface2", ReplaceWith("surface2"))
-}
+)
 
 private val LightExtras = BokeyaColors(
     canvas = Color(0xFFF7F6F3),
