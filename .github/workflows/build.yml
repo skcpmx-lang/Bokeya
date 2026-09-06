@@ -26,7 +26,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDist 2>&1 | tee /tmp/build.log
+          ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug assembleDist 2>&1 | tee /tmp/build.log
       - name: Stage and verify Bokeya.apk
         id: verify
         if: always()
@@ -74,6 +74,37 @@ jobs:
           unzip -l "$APK" | grep -cE "^.*res/" | sed 's/^/  res entries: /' >> /tmp/verify.txt
           echo "ALL GATES PASSED" >> /tmp/verify.txt
           cat /tmp/verify.txt
+      - name: APK size audit
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          D=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          R=$(find app/build/outputs/apk/dist  -name '*.apk' | head -1)
+          [ -z "$D" ] || [ -z "$R" ] && { echo "audit skipped" > /tmp/audit.txt; exit 0; }
+          {
+            echo "debug=$(stat -c%s $D) B   dist=$(stat -c%s $R) B"
+            echo "dex:     debug=$(unzip -l $D | grep -c 'classes.*dex')  dist=$(unzip -l $R | grep -c 'classes.*dex')"
+            echo "entries: debug=$(unzip -l $D | tail -1 | awk '{print $2}')  dist=$(unzip -l $R | tail -1 | awk '{print $2}')"
+            echo "lib/:    debug=$(unzip -l $D | grep -c 'lib/')  dist=$(unzip -l $R | grep -c 'lib/')"
+            echo "perms debug: $($BT/aapt2 dump badging $D | grep -c uses-permission)"
+            echo "perms dist:  $($BT/aapt2 dump badging $R | grep -c uses-permission)"
+            echo "feature classes (must be yes/yes):"
+            for c in DailyDigestWorker ReminderWorker BootReceiver BokeyaDatabase BackupPayload \
+                     TotalDueWidgetReceiver TodayWidgetReceiver NextPaymentWidgetReceiver \
+                     MonthlySummaryWidgetReceiver Exporter InsightEngine; do
+              a=no; b=no
+              unzip -p $D 'classes*.dex' | grep -qa "$c" && a=yes
+              unzip -p $R 'classes*.dex' | grep -qa "$c" && b=yes
+              echo "  $c: debug=$a dist=$b"
+            done
+            echo "top entries in debug:"
+            unzip -l $D | sort -k1 -n -r | head -8
+            echo "top entries in dist:"
+            unzip -l $R | sort -k1 -n -r | head -8
+          } > /tmp/audit.txt
+          cat /tmp/audit.txt
       - name: Test summary
         if: always()
         continue-on-error: true
@@ -98,6 +129,9 @@ jobs:
             echo "### exit: ${{ steps.build.outcome }}"
             echo "--- tests ---"
             cat /tmp/tests.txt 2>/dev/null | tail -60
+            echo ""
+            echo "--- size audit ---"
+            cat /tmp/audit.txt 2>/dev/null
             echo ""
             echo "--- apk verify ---"
             cat /tmp/verify.txt 2>/dev/null
