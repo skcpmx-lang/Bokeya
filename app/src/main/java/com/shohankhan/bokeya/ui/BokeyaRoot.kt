@@ -75,6 +75,7 @@ import com.shohankhan.bokeya.AppContainer
 import com.shohankhan.bokeya.data.repo.BokeyaSettings
 import com.shohankhan.bokeya.domain.AccountType
 import com.shohankhan.bokeya.notifications.DeepLinks
+import com.shohankhan.bokeya.ui.components.BokeyaAddButton
 import com.shohankhan.bokeya.ui.components.BokeyaDock
 import com.shohankhan.bokeya.ui.components.DockItem
 import com.shohankhan.bokeya.ui.components.QuickAddAction
@@ -192,6 +193,15 @@ private fun MainShell(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = fadeIn(tween(Motion.SHORT)),
+                exit = fadeOut(tween(Motion.SHORT)),
+            ) {
+                BokeyaAddButton(onClick = { showQuickAdd = true })
+            }
+        },
         bottomBar = {
             AnimatedVisibility(
                 visible = showBottomBar,
@@ -210,7 +220,6 @@ private fun MainShell(
                             }
                         }
                     },
-                    onAdd = { showQuickAdd = true },
                 )
             }
         },

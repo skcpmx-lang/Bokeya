@@ -83,7 +83,6 @@ import com.shohankhan.bokeya.ui.components.IconBadge
 import com.shohankhan.bokeya.ui.components.LegendItem
 import com.shohankhan.bokeya.ui.components.MoneyText
 import com.shohankhan.bokeya.ui.components.ProgressRing
-import com.shohankhan.bokeya.ui.components.QuickAction
 import com.shohankhan.bokeya.ui.components.RowDivider
 import com.shohankhan.bokeya.ui.components.SectionHeader
 import com.shohankhan.bokeya.ui.components.Skeleton
@@ -98,6 +97,8 @@ import com.shohankhan.bokeya.ui.theme.Space
 import com.shohankhan.bokeya.ui.theme.bokeya
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Lock
 
 /**
  * Dashboard.
@@ -145,6 +146,8 @@ fun DashboardScreen(
 
         if (!state.hasAnyData) {
             item("firstrun") { FirstRunPanel(onQuickAction) }
+            item("firstrun_preview") { FirstRunPreview() }
+            item("firstrun_privacy") { FirstRunPrivacy() }
             return@LazyColumn
         }
 
@@ -931,24 +934,162 @@ private fun FirstRunPanel(onQuickAction: (String) -> Unit) {
             )
             Spacer(Modifier.height(Space.sm))
             Text(
-                "যা দিতে হবে আর যা পাবেন — দুটোই এক জায়গায় থাকবে। " +
-                    "প্রথম হিসাবটি যোগ করলেই এখানে সব দেখতে পাবেন।",
+                "যা দিতে হবে আর যা পাবেন — দুটোই এক জায়গায়। প্রথম হিসাবটি যোগ করলেই " +
+                    "এখানে মোট বকেয়া, আসন্ন কিস্তি, আয়-ব্যয় আর জরুরি তথ্য দেখা যাবে।",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.bokeya.onHeroMuted,
             )
         }
+
         Spacer(Modifier.height(Space.xl))
-        BokeyaSection(title = "শুরু করুন") {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                QuickAction(Icons.Filled.Storefront, "বাকি", { onQuickAction("shop") })
-                QuickAction(Icons.Filled.Handshake, "ধার", { onQuickAction("personal") })
-                QuickAction(Icons.Filled.AccountBalance, "Loan", { onQuickAction("loan") })
-                QuickAction(Icons.Filled.CreditCard, "EMI", { onQuickAction("emi") })
+
+        // Quick actions are the entry points — labelled as such, not as the dashboard itself.
+        BokeyaSection(title = "কী যোগ করবেন?", subtitle = "যেটা আপনার দরকার সেটাই বেছে নিন") {
+            BokeyaGroup(contentPadding = PaddingValues(vertical = Space.xs)) {
+                StarterRow(
+                    Icons.Filled.Storefront,
+                    "দোকানের বাকি",
+                    "মুদি বা দোকানে যা বাকি আছে",
+                ) { onQuickAction("shop") }
+                RowDivider(inset = 68.dp)
+                StarterRow(
+                    Icons.Filled.Handshake,
+                    "ব্যক্তিগত ধার",
+                    "কাউকে দিয়েছেন বা কারও কাছে নিয়েছেন",
+                ) { onQuickAction("personal") }
+                RowDivider(inset = 68.dp)
+                StarterRow(
+                    Icons.Filled.AccountBalance,
+                    "Loan",
+                    "ব্যাংক বা সমিতির ঋণ",
+                ) { onQuickAction("loan") }
+                RowDivider(inset = 68.dp)
+                StarterRow(
+                    Icons.Filled.CreditCard,
+                    "EMI",
+                    "কিস্তিতে কেনা জিনিস",
+                ) { onQuickAction("emi") }
             }
         }
+    }
+}
+
+@Composable
+private fun StarterRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    BokeyaRow(
+        title = title,
+        subtitle = subtitle,
+        onClick = onClick,
+        leading = { IconBadge(icon, MaterialTheme.colorScheme.primary, size = 40.dp) },
+        trailing = {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                null,
+                tint = MaterialTheme.bokeya.faint,
+                modifier = Modifier.size(IconSize.md),
+            )
+        },
+    )
+}
+
+/**
+ * Shows the shape of the real dashboard before any data exists, so the empty screen still
+ * teaches. Deliberately inert and visibly muted — these are labels, never fake numbers.
+ */
+@Composable
+private fun FirstRunPreview() {
+    val extras = MaterialTheme.bokeya
+    BokeyaSection(
+        title = "যোগ করার পর এখানে যা দেখবেন",
+        subtitle = "নিচের অংশগুলো নিজে থেকেই ভরে উঠবে",
+    ) {
+        BokeyaGroup(contentPadding = PaddingValues(Space.lg)) {
+            PreviewLine("মোট বকেয়া", "আপনি কত দেবেন আর কত পাবেন, এক নজরে")
+            Spacer(Modifier.height(Space.md))
+            // Inert placeholder bar: a shape, not a chart.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(Radius.pill)),
+            ) {
+                listOf(0.42f, 0.28f, 0.19f, 0.11f).forEachIndexed { index, weight ->
+                    Box(
+                        Modifier
+                            .weight(weight)
+                            .fillMaxHeight()
+                            .padding(end = if (index == 3) 0.dp else 3.dp)
+                            .clip(RoundedCornerShape(Radius.pill))
+                            .background(extras.series[index].copy(alpha = 0.30f)),
+                    )
+                }
+            }
+            Spacer(Modifier.height(Space.md))
+            Text(
+                "দোকান · Loan · EMI · ব্যক্তিগত — ভাগ অনুযায়ী",
+                style = MaterialTheme.typography.labelSmall,
+                color = extras.faint,
+            )
+            Spacer(Modifier.height(Space.lg))
+            RowDivider(inset = 0.dp)
+            Spacer(Modifier.height(Space.lg))
+            PreviewLine("সামনে যা আছে", "আজ, আগামীকাল ও আগামী ৭ দিনের কিস্তি")
+            Spacer(Modifier.height(Space.md))
+            PreviewLine("আজকের হিসাব", "দিতে হবে, পাবেন, আয় ও খরচ")
+            Spacer(Modifier.height(Space.md))
+            PreviewLine("এই মাস", "আয়-ব্যয়ের সারাংশ ও গতিধারা")
+            Spacer(Modifier.height(Space.md))
+            PreviewLine("আপনার জন্য", "সময়মতো জরুরি কথাগুলো মনে করিয়ে দেবে")
+        }
+    }
+}
+
+@Composable
+private fun PreviewLine(title: String, subtitle: String) {
+    val extras = MaterialTheme.bokeya
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(extras.faint),
+        )
+        Spacer(Modifier.width(Space.md))
+        Column {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = extras.faint)
+        }
+    }
+}
+
+@Composable
+private fun FirstRunPrivacy() {
+    val extras = MaterialTheme.bokeya
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Lock,
+            null,
+            tint = extras.success,
+            modifier = Modifier.size(IconSize.sm),
+        )
+        Spacer(Modifier.width(Space.sm))
+        Text(
+            "সব হিসাব শুধু আপনার ফোনেই থাকে। কোনো internet, কোনো বিজ্ঞাপন, কোনো tracking নেই।",
+            style = MaterialTheme.typography.bodySmall,
+            color = extras.muted,
+        )
     }
 }
 

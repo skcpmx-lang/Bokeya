@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,18 +59,17 @@ data class DockItem(
 )
 
 /**
- * Bottom dock.
+ * Bottom dock: five evenly weighted tabs and nothing else.
  *
- * The add button is *inside* the bar rather than a detached FAB hovering over content — that
- * detachment was one of the things that made the old shell feel unresolved. Selection is shown
- * by a small indicator bar plus weight/colour change, never by an oversized pill.
+ * Quick-add is a separate FAB anchored above this bar, so the navigation reads as navigation
+ * and the primary action reads as an action. Selection is shown by a small indicator bar plus
+ * weight/colour change, never by an oversized pill.
  */
 @Composable
 fun BokeyaDock(
     items: List<DockItem>,
     currentRoute: String?,
     onSelect: (String) -> Unit,
-    onAdd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val extras = MaterialTheme.bokeya
@@ -92,17 +92,7 @@ fun BokeyaDock(
                     .padding(horizontal = Space.sm, vertical = Space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // First half of the tabs, the add button, then the rest — a balanced split.
-                val split = (items.size + 1) / 2
-                items.take(split).forEach { item ->
-                    DockTab(item, item.route == currentRoute, Modifier.weight(1f)) {
-                        onSelect(item.route)
-                    }
-                }
-
-                AddButton(onAdd)
-
-                items.drop(split).forEach { item ->
+                items.forEach { item ->
                     DockTab(item, item.route == currentRoute, Modifier.weight(1f)) {
                         onSelect(item.route)
                     }
@@ -167,30 +157,42 @@ private fun DockTab(
     }
 }
 
+/**
+ * Quick-add FAB. Squircle rather than a circle so it rhymes with the dock's indicator and the
+ * app's card radii, and it carries the hero colour so it reads as part of the same system.
+ */
 @Composable
-private fun AddButton(onClick: () -> Unit) {
+fun BokeyaAddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val extras = MaterialTheme.bokeya
     val interaction = remember { MutableInteractionSource() }
-    val scale by animateFloatAsState(1f, label = "addScale")
-    Box(
-        Modifier
-            .padding(horizontal = Space.sm)
-            .size(52.dp)
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        if (pressed) 0.94f else 1f,
+        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "addScale",
+    )
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .size(56.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.primary)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .semantics {
                 role = Role.Button
                 contentDescription = "নতুন হিসাব যোগ করুন"
             },
-        contentAlignment = Alignment.Center,
+        shape = RoundedCornerShape(20.dp),
+        color = extras.heroStart,
+        contentColor = extras.onHero,
+        shadowElevation = 6.dp,
+        interactionSource = interaction,
     ) {
-        Icon(
-            Icons.Filled.Add,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.size(IconSize.lg),
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = null,
+                modifier = Modifier.size(IconSize.lg),
+            )
+        }
     }
 }
 
