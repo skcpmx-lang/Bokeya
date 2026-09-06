@@ -261,8 +261,14 @@ class RegressionFlowTest {
         val beforePaid = repo.summaryOnce(id)!!.paid
 
         assertEquals(1, beforeAccounts)
-        assertEquals(1, beforeTx)
         assertEquals(Money(4_000), beforePaid)
+        // The ledger auto-logs the purchase and the payment alongside the manual income entry,
+        // so activity is fully reconstructable from transactions alone.
+        assertEquals(3, beforeTx)
+        val kinds = repo.allTransactions.first().map { it.type }.toSet()
+        assertTrue(kinds.contains(TxType.SHOP_PURCHASE))
+        assertTrue(kinds.contains(TxType.PAYMENT))
+        assertTrue(kinds.contains(TxType.INCOME))
 
         // Wipe simulates a fresh device; the surviving state must be genuinely empty.
         repo.wipeAllData()
