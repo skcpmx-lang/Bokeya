@@ -1,0 +1,57 @@
+name: audit
+on: workflow_dispatch
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions: { contents: read, issues: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.9' }
+      - run: gradle wrapper --gradle-version 8.9 --no-daemon
+      - name: Build debug + dist from identical source
+        run: ./gradlew --no-daemon assembleDebug assembleDist
+      - name: Compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          D=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          R=$(find app/build/outputs/apk/dist  -name '*.apk' | head -1)
+          {
+            echo "## APK size audit (same commit, same source)"
+            echo ""
+            printf '| | debug | dist (shipped) |\n|---|---|---|\n'
+            printf '| size | %s B | %s B |\n' "$(stat -c%s $D)" "$(stat -c%s $R)"
+            printf '| dex files | %s | %s |\n' "$(unzip -l $D | grep -c 'classes.*dex')" "$(unzip -l $R | grep -c 'classes.*dex')"
+            printf '| entries | %s | %s |\n' "$(unzip -l $D | tail -1 | awk '{print $2}')" "$(unzip -l $R | tail -1 | awk '{print $2}')"
+            echo ""
+            echo "### Largest components, debug"
+            unzip -l $D | sort -k1 -n -r | head -12
+            echo ""
+            echo "### Largest components, dist"
+            unzip -l $R | sort -k1 -n -r | head -12
+            echo ""
+            echo "### Feature-bearing classes present in BOTH"
+            for c in DailyDigestWorker ReminderWorker BootReceiver BokeyaDatabase BackupPayload \
+                     TotalDueWidgetReceiver TodayWidgetReceiver NextPaymentWidgetReceiver \
+                     MonthlySummaryWidgetReceiver Exporter AppLock InsightEngine; do
+              in_d=no; in_r=no
+              unzip -p $D 'classes*.dex' | grep -qa "$c" && in_d=yes
+              unzip -p $R 'classes*.dex' | grep -qa "$c" && in_r=yes
+              printf -- '- %s: debug=%s dist=%s\n' "$c" "$in_d" "$in_r"
+            done
+            echo ""
+            echo "### Permissions"
+            echo "debug: $($BT/aapt2 dump badging $D | grep uses-permission | tr '\n' ' ')"
+            echo "dist:  $($BT/aapt2 dump badging $R | grep uses-permission | tr '\n' ' ')"
+            echo ""
+            echo "### Native libs / ABI"
+            echo "debug lib/ entries: $(unzip -l $D | grep -c 'lib/')"
+            echo "dist  lib/ entries: $(unzip -l $R | grep -c 'lib/')"
+          } > /tmp/audit.md
+          cat /tmp/audit.md
+          gh issue comment 1 --repo ${{ github.repository }} --body-file /tmp/audit.md
