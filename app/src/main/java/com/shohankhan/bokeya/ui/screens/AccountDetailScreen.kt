@@ -56,7 +56,8 @@ import com.shohankhan.bokeya.domain.InstallmentStatus
 import com.shohankhan.bokeya.ui.DetailViewModel
 import com.shohankhan.bokeya.ui.components.BokeyaCard
 import com.shohankhan.bokeya.ui.components.BokeyaProgress
-import com.shohankhan.bokeya.ui.components.HeroGradient
+import com.shohankhan.bokeya.ui.components.BokeyaCanvas
+import com.shohankhan.bokeya.ui.components.Eyebrow
 import com.shohankhan.bokeya.ui.components.InfoRow
 import com.shohankhan.bokeya.ui.components.MoneyText
 import com.shohankhan.bokeya.ui.components.PrimaryButton
@@ -135,28 +136,41 @@ fun AccountDetailScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item("hero") {
-                HeroGradient {
+                BokeyaCanvas {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(
+                            Eyebrow(
                                 if (summary.direction == Direction.I_OWE) "এখনো বাকি" else "এখনো পাওনা",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.75f),
+                                color = MaterialTheme.bokeya.onHeroMuted,
                             )
                             Spacer(Modifier.height(4.dp))
                             MoneyText(
                                 summary.remaining,
                                 style = MaterialTheme.typography.displaySmall,
-                                color = Color.White,
+                                color = MaterialTheme.bokeya.onHero,
                                 animate = true,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "মোট " + CurrencyFormatter.format(summary.total) +
+                                    " · শোধ " + CurrencyFormatter.format(summary.paid),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.bokeya.onHeroMuted,
                             )
                         }
                         if (summary.total.isPositive) {
+                            Spacer(Modifier.width(12.dp))
                             ProgressRing(
                                 progress = summary.progress,
-                                size = 78.dp,
-                                color = Color.White,
-                                label = "পরিশোধ",
+                                size = 84.dp,
+                                stroke = 8.dp,
+                                color = MaterialTheme.bokeya.onHero,
+                                trackColor = Color.White.copy(alpha = 0.16f),
+                                caption = BanglaNumbers.toBanglaDigits(
+                                    summary.progressPercent.toString(),
+                                ) + "%",
+                                captionColor = MaterialTheme.bokeya.onHero,
+                                subCaption = "শোধ",
                             )
                         }
                     }

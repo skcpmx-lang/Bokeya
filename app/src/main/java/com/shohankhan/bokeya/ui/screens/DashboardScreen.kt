@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.EastRounded
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.NotificationsNone
